@@ -26,9 +26,9 @@
 
 int rx, ry, rz = 0;
 int tz = 0;
-int tx = -1;
-int ty = -1;
-float s=0.25;
+int tx = 0;
+int ty = 0;
+float s=0.5;
 int r = 0;
 
 void onKeyPress(unsigned char key, int keyX, int keyY) {
@@ -132,7 +132,7 @@ void drawAxis() {
 }
 
 void drawObject() {
-    int i, j, k, l;
+    int i, j, k, l, m;
     
 //        # Calculate the necessary constants
 //        s = 1/sqrt(3)
@@ -186,6 +186,7 @@ void drawObject() {
 //>>> for f in o.data.faces:
 //...     print ("{%d, %d, %d, %d}, " % (f.vertices[0], f.vertices[1], f.vertices[2], f.vertices[3]))
 #define NF 30
+    
     short faces[NF][4] = {{0, 20, 16, 22}, 
                           {0, 22, 12, 21}, 
                           {0, 21, 8, 20}, 
@@ -218,36 +219,77 @@ void drawObject() {
                           {18, 28, 19, 29}};
 
 #define NN 12
-    short neighbors[NV][NN] = {0};
-    for (i=0; i<NV; i++) {
+    short neighbors[NF][NN] = {0};
+    for (i=0; i<NF; i++) {
         for (j=0; j<NN; j++) {
             neighbors[i][j] = -1;
         }
     }
     
     
-    for (i=0; i < NF; i++) {                    //Face
-        for (j=0; j < 4; j++) {                 //From vertex
-            for (k=0; k < 4; k++) {             //To vertex
-                short inserted = 0;
-                short from = faces[i][j];
-                short to = faces[i][k];
-                float distance = sqrt((vertexes[from][0] - vertexes[to][0]) * (vertexes[from][0] - vertexes[to][0]) +
-                                      (vertexes[from][1] - vertexes[to][1]) * (vertexes[from][1] - vertexes[to][1]) +
-                                      (vertexes[from][2] - vertexes[to][2]) * (vertexes[from][2] - vertexes[to][2]));
-                if (from != to && distance > 0.61 && distance < 0.62) {
-                    int inserted = FALSE;
-                    for (l=0; l < NN && !inserted; l++) {         //Unique in neighbors
-                        if (neighbors[from][l] == -1 || neighbors[from][l] == to) {
-                            inserted = TRUE;
-                            neighbors[from][l] = to;
+//    for (i=0; i < NF; i++) {                    //Face
+//        for (j=0; j < 4; j++) {                 //From vertex
+//            for (k=0; k < 4; k++) {             //To vertex
+//                short inserted = 0;
+//                short from = faces[i][j];
+//                short to = faces[i][k];
+//                float distance = sqrt((vertexes[from][0] - vertexes[to][0]) * (vertexes[from][0] - vertexes[to][0]) +
+//                                      (vertexes[from][1] - vertexes[to][1]) * (vertexes[from][1] - vertexes[to][1]) +
+//                                      (vertexes[from][2] - vertexes[to][2]) * (vertexes[from][2] - vertexes[to][2]));
+//                if (from != to && distance > 0.61 && distance < 0.62) {
+//                    int inserted = FALSE;
+//                    for (l=0; l < NN && !inserted; l++) {         //Unique in neighbors
+//                        if (neighbors[from][l] == -1 || neighbors[from][l] == to) {
+//                            inserted = TRUE;
+//                            neighbors[from][l] = to;
+//                        }
+//                    }
+//                }
+//            }
+//        }
+//    }
+    
+    //Source face
+    for(i=0; i < NF; i++) {
+        //Destination face
+        for(j=0; j < NF; j++) {
+//            printf("face[%d] <> face[%d]\n", i, j);
+            short neighbor = FALSE;
+            //Source vertex
+            for (k=0; k < 4 && !neighbor && i != j; k++) {
+                //Destination vertex
+                for (l=0; l < 4 && !neighbor; l++) {
+                    if (faces[i][k] == faces[j][l]) {
+                        neighbor = TRUE;
+                        short exists = FALSE;
+//                        printf(" Nei %d - %d = %d: ", k, l, faces[i][k]);
+                        for (m=0; m < NN && !exists; m++) {
+                            if (neighbors[i][m] == j) {
+                                exists = TRUE;
+//                                printf("~%d~ ", neighbors[i][m]);
+                            } else if (neighbors[i][m] == -1) {
+                                neighbors[i][m] = j;
+                                exists = TRUE;
+//                                printf("#%d# ", neighbors[i][m]);
+                            } else {
+//                                printf("%d, ", neighbors[i][m]);
+                            }
                         }
+//                        printf("\n");
                     }
                 }
             }
         }
     }
     
+//    for(i=0; i < NF; i++) {
+//        printf("n[%d] = ", i);
+//        for(j=0; j < NN; j++) {
+//            printf("%d, ", neighbors[i][j]);
+//        }
+//        printf("\n");
+//    }
+
 #define GL_VERTER_ARRAY(array) glVertex3f(array[0], array[1], array[2]) 
 #define GL_COLORS_ARRAY(array) glColor3f(array[0], array[1], array[2]) 
     
@@ -268,29 +310,22 @@ void drawObject() {
         glEnd();
     }
     
-#define NC 6
-    float available_colors[NC][3] = {
-            {0, 0, 1}, 
-            {0, 1, 0},
-            {1, 0, 0},
-            {1, 1, 0},
-            {1, 0, 1},
-            {0, 1, 1}
-            };
-    int colors[NV] = {0};
-    for (i=0; i < NV; i++) {
+#define NC 8
+    float available_colors[NC][3] ={{0, 0, 1}, 
+                                    {0, 1, 0},
+                                    {1, 0, 0},
+                                    {1, 1, 0},
+                                    {1, 0, 1},
+                                    {0, 1, 1},
+                                    {1, 0, 1},
+                                    {1, 1, 1}};
+    int colors[NF] = {0};
+    for (i=0; i < NF; i++) {
         colors[i] = -1;
     }
     
-//    for (i=0; i<NV; i++) {
-//        printf("Nei[%d] = ", i);
-//        for (j=0; j<NN; j++) {
-//            printf("%d, ", neighbors[i][j]);
-//        }
-//        printf("\n");
-//    }
-    
-    for (i=0; i < NV; i++) {
+
+    for (i=0; i < NF; i++) {
         // Colors
         short found = FALSE;
 //        printf("c[%d]:\n", i);
@@ -314,19 +349,17 @@ void drawObject() {
         }
     }
     
-//    for (i=0; i < NV; i++) {
+    for (i=0; i < NF; i++) {
 //        printf("c[%d] %d\n", i, colors[i]);
-//    }
+    }
     
-    glTranslatef(2, 0, 0);
-    for (i=0; i < NV; i++) {
-        for (j=0; j<NN; j++) {
-            glBegin(GL_POINTS);
-                GL_COLORS_ARRAY(available_colors[colors[i]]);
-                GL_VERTER_ARRAY(vertexes[i]);
-//                GL_VERTER_ARRAY(vertexes[neighbors[i][j]]);
-            glEnd();
-        }
+    for (i=0; i < NF; i++) {
+        GL_COLORS_ARRAY(available_colors[colors[i]]);
+        glBegin(GL_POLYGON);
+            for (j=0; j<4; j++) {
+                GL_VERTER_ARRAY(vertexes[faces[i][j]]);
+            }
+        glEnd();
     }
     
 //    exit(0);
@@ -347,9 +380,10 @@ void renderScene(void) {
     glRotatef(rx, 1.0, 0, 0);
     glRotatef(ry, 0, 1.0, 0);
     glRotatef(rz, 0, 0, 1.0);
+    drawObject();    
+
+    glTranslatef(-1, -1, -1);
     drawAxis();
-        
-    drawObject();
     
     glutSwapBuffers();
 }
@@ -361,10 +395,11 @@ void renderScene(void) {
 int main(int argc, char **argv) {
     // Init GLUT and create Window
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_ALPHA);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowPosition(100,400);
     glutInitWindowSize(640,640);
-    glutCreateWindow("Tests");    
+    glutCreateWindow("U3");    
+    glEnable(GL_DEPTH_TEST);
     
     // Register callbacks
     glutDisplayFunc(renderScene);
