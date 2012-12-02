@@ -21,6 +21,9 @@
 #define KEY_ESCAPE 27
 #define KEY_ENTER 13
 
+#define FALSE 0
+#define TRUE 1
+
 int rx, ry, rz = 0;
 int tz = 0;
 int tx = -1;
@@ -129,6 +132,7 @@ void drawAxis() {
 }
 
 void drawObject() {
+    int i, j, k, l;
     
 //        # Calculate the necessary constants
 //        s = 1/sqrt(3)
@@ -213,13 +217,43 @@ void drawObject() {
                           {16, 25, 17, 22}, 
                           {18, 28, 19, 29}};
 
+#define NN 12
+    short neighbors[NV][NN] = {0};
+    for (i=0; i<NV; i++) {
+        for (j=0; j<NN; j++) {
+            neighbors[i][j] = -1;
+        }
+    }
+    
+    
+    for (i=0; i < NF; i++) {                    //Face
+        for (j=0; j < 4; j++) {                 //From vertex
+            for (k=0; k < 4; k++) {             //To vertex
+                short inserted = 0;
+                short from = faces[i][j];
+                short to = faces[i][k];
+                float distance = sqrt((vertexes[from][0] - vertexes[to][0]) * (vertexes[from][0] - vertexes[to][0]) +
+                                      (vertexes[from][1] - vertexes[to][1]) * (vertexes[from][1] - vertexes[to][1]) +
+                                      (vertexes[from][2] - vertexes[to][2]) * (vertexes[from][2] - vertexes[to][2]));
+                if (from != to && distance > 0.61 && distance < 0.62) {
+                    int inserted = FALSE;
+                    for (l=0; l < NN && !inserted; l++) {         //Unique in neighbors
+                        if (neighbors[from][l] == -1 || neighbors[from][l] == to) {
+                            inserted = TRUE;
+                            neighbors[from][l] = to;
+                        }
+                    }
+                }
+            }
+        }
+    }
     
 #define GL_VERTER_ARRAY(array) glVertex3f(array[0], array[1], array[2]) 
+#define GL_COLORS_ARRAY(array) glColor3f(array[0], array[1], array[2]) 
     
     //Vertexes
     glColor3f(1, 1, 0);
     glBegin(GL_POINTS);
-        int i;
         for (i = 0; i < NV; i++) {
             GL_VERTER_ARRAY(vertexes[i]);
         }
@@ -228,14 +262,75 @@ void drawObject() {
     glColor3f(0, 1, 1);
     for (i=0; i < NF; i++) {
         glBegin(GL_LINES);
-            int j;
             for (j=0; j < 4; j++) {
                 GL_VERTER_ARRAY(vertexes[faces[i][j]]);
             }
         glEnd();
     }
+    
+#define NC 6
+    float available_colors[NC][3] = {
+            {0, 0, 1}, 
+            {0, 1, 0},
+            {1, 0, 0},
+            {1, 1, 0},
+            {1, 0, 1},
+            {0, 1, 1}
+            };
+    int colors[NV] = {0};
+    for (i=0; i < NV; i++) {
+        colors[i] = -1;
+    }
+    
+//    for (i=0; i<NV; i++) {
+//        printf("Nei[%d] = ", i);
+//        for (j=0; j<NN; j++) {
+//            printf("%d, ", neighbors[i][j]);
+//        }
+//        printf("\n");
+//    }
+    
+    for (i=0; i < NV; i++) {
+        // Colors
+        short found = FALSE;
+//        printf("c[%d]:\n", i);
+        for (j = 0; j < NC && !found; j++) {
+//            printf("\tj=%d found=%d\n", j, found);
+            short inUse = FALSE;
+            for (k = 0; k < NN && neighbors[i][k] != -1 && !inUse; k++) {
+//                printf("\t\tn[%d][%d]  c[%d]=%d\n", i, k, neighbors[i][k], colors[neighbors[i][k]]);
+                if (colors[neighbors[i][k]] == j) {
+                    inUse = TRUE;
+                }
+//                printf("\t\t n[%d][%d] c[%d]=%d inUse=%d\n", i, k, neighbors[i][k], colors[neighbors[i][k]], inUse);
+            }
+            if (!inUse) {
+                colors[i] = j;
+//                printf("\t\t\t c[%d] = %d\n", i, j);
+                found = TRUE;
+            } else {
+//                printf("\t\t\t Cont c[%d] = %d\n", neighbors[i][k], colors[neighbors[i][k]]);
+            }
+        }
+    }
+    
+//    for (i=0; i < NV; i++) {
+//        printf("c[%d] %d\n", i, colors[i]);
+//    }
+    
+    glTranslatef(2, 0, 0);
+    for (i=0; i < NV; i++) {
+        for (j=0; j<NN; j++) {
+            glBegin(GL_POINTS);
+                GL_COLORS_ARRAY(available_colors[colors[i]]);
+                GL_VERTER_ARRAY(vertexes[i]);
+//                GL_VERTER_ARRAY(vertexes[neighbors[i][j]]);
+            glEnd();
+        }
+    }
+    
+//    exit(0);
 }
-
 
 
 /*
