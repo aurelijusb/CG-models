@@ -28,6 +28,7 @@ int rx, ry, rz = 0;
 int rrx, rry, rrz = 0;
 float s=0.5;
 int r = 0;
+short timer = FALSE;
 
 void onKeyPress(unsigned char key, int keyX, int keyY) {
     switch (key) {
@@ -64,6 +65,14 @@ void onKeyPress(unsigned char key, int keyX, int keyY) {
             rx = 0;
             ry = 0;
             rz = 0;
+        break;
+        
+        case ' ':
+            if (timer) {
+                timer = FALSE;
+            } else {
+                timer = TRUE;
+            }
         break;
     }
     if (rx > 360) { rx -= 360; } else if (rx < 0) { rx += 360; }
@@ -297,6 +306,17 @@ void drawObject() {
 }
 
 
+GLvoid Timer( int value )
+{
+    if (timer) {
+        rx += 2;
+        ry += 4;
+        rz += 6;
+        glutPostRedisplay();
+    }
+    glutTimerFunc(40,Timer,value);
+}
+
 /*
  * Main drawing loop
  */
@@ -339,9 +359,11 @@ int main(int argc, char **argv) {
     // Register callbacks
     glutDisplayFunc(renderScene);
     glutKeyboardFunc(onKeyPress);
+    glutTimerFunc(40,Timer,0);
     
     // Enter GLUT event processing cycle
     glutMainLoop();
+    
 
     return 0;
 }
