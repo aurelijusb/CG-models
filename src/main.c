@@ -25,9 +25,7 @@
 #define TRUE 1
 
 int rx, ry, rz = 0;
-int tz = 0;
-int tx = 0;
-int ty = 0;
+int rrx, rry, rrz = 0;
 float s=0.5;
 int r = 0;
 
@@ -51,47 +49,31 @@ void onKeyPress(unsigned char key, int keyX, int keyY) {
         case 'x':
             rz++;
         break;
-        
-        case 'e':
-            tx--;
+              
+        case '1':
+            rrx += 180;
         break;
-        case 'r':
-            tx++;
+        case '2':
+            rry += 180;
         break;
-        case 'd':
-            ty--;
-        break;
-        case 'f':
-            ty++;
-        break;
-        case 'c':
-            tz--;
-        break;
-        case 'v':
-            tz++;
+        case '3':
+            rrz += 180;
         break;
         
         case KEY_ENTER:
             rx = 0;
             ry = 0;
             rz = 0;
-            tx = 0;
-            ty = 0;
-            tz = 0;
-        break;
-        case '1':
-            s *= 2;
-        break;
-        case '2':
-            s /= 2;
         break;
     }
     if (rx > 360) { rx -= 360; } else if (rx < 0) { rx += 360; }
     if (ry > 360) { ry -= 360; } else if (ry < 0) { ry += 360; }
     if (rz > 360) { rz -= 360; } else if (rz < 0) { rz += 360; }
-    if (r > 360) { r -= 360; } else if (r < 0) { r += 360; }
+    if (rrx > 360) { rrx -= 360; } else if (rrx < 0) { rrx += 360; }
+    if (rry > 360) { rry -= 360; } else if (rry < 0) { rry += 360; }
+    if (rrz > 360) { rrz -= 360; } else if (rrz < 0) { rrz += 360; }
     glutPostRedisplay();
-    printf("Rot (%d, %d, %d) Translate (%d, %d, %d)\n", rx, ry, rz, tx, ty, tz);
+//    printf("Rot (%d, %d, %d) Translate (%d, %d, %d)\n", rx, ry, rz, tx, ty, tz);
 }
 
 void drawAxis() {
@@ -133,22 +115,6 @@ void drawAxis() {
 
 void drawObject() {
     int i, j, k, l, m;
-    
-//        # Calculate the necessary constants
-//        s = 1/sqrt(3)
-//        t = sqrt((3-sqrt(5))/6)
-//        u = sqrt((3+sqrt(5))/6)
-//
-//        # create the vertices and faces
-//        v = [(s,s,s),(s,s,-s),(s,-s,s),(s,-s,-s),(-s,s,s),(-s,s,-s),(-s,-s,s),(-s,-s,-s),
-//             (t,u,0),(-t,u,0),(t,-u,0),(-t,-u,0),(u,0,t),(u,0,-t),(-u,0,t),(-u,0,-t),(0,t,u),
-//             (0,-t,u),(0,t,-u),(0,-t,-u)]
-//        faces = [[0,8,9,4,16],[0,12,13,1,8],[0,16,17,2,12],[8,1,18,5,9],[12,2,10,3,13],
-//                 [16,4,14,6,17],[9,5,15,14,4],[6,11,10,2,17],[3,19,18,1,13],[7,15,5,18,19],
-//                 [7,11,6,14,15],[7,19,3,10,11]]
-
-//>>> for v in o.data.vertices:
-//...     print ("{%f, %f, %f}, " % (v.co[0], v.co[1], v.co[2]))
     
 #define NV 32
     float vertexes[NV][3] = {{0.525731, 0.525731, 0.525731}, 
@@ -225,71 +191,36 @@ void drawObject() {
             neighbors[i][j] = -1;
         }
     }
-    
-    
-//    for (i=0; i < NF; i++) {                    //Face
-//        for (j=0; j < 4; j++) {                 //From vertex
-//            for (k=0; k < 4; k++) {             //To vertex
-//                short inserted = 0;
-//                short from = faces[i][j];
-//                short to = faces[i][k];
-//                float distance = sqrt((vertexes[from][0] - vertexes[to][0]) * (vertexes[from][0] - vertexes[to][0]) +
-//                                      (vertexes[from][1] - vertexes[to][1]) * (vertexes[from][1] - vertexes[to][1]) +
-//                                      (vertexes[from][2] - vertexes[to][2]) * (vertexes[from][2] - vertexes[to][2]));
-//                if (from != to && distance > 0.61 && distance < 0.62) {
-//                    int inserted = FALSE;
-//                    for (l=0; l < NN && !inserted; l++) {         //Unique in neighbors
-//                        if (neighbors[from][l] == -1 || neighbors[from][l] == to) {
-//                            inserted = TRUE;
-//                            neighbors[from][l] = to;
-//                        }
-//                    }
-//                }
-//            }
-//        }
-//    }
+
     
     //Source face
     for(i=0; i < NF; i++) {
         //Destination face
         for(j=0; j < NF; j++) {
-//            printf("face[%d] <> face[%d]\n", i, j);
             short neighbor = FALSE;
             //Source vertex
             for (k=0; k < 4 && !neighbor && i != j; k++) {
                 //Destination vertex
                 for (l=0; l < 4 && !neighbor; l++) {
+                    // Cecking if neighbor
                     if (faces[i][k] == faces[j][l]) {
                         neighbor = TRUE;
+                        //Adding to neighbors list
                         short exists = FALSE;
-//                        printf(" Nei %d - %d = %d: ", k, l, faces[i][k]);
                         for (m=0; m < NN && !exists; m++) {
                             if (neighbors[i][m] == j) {
                                 exists = TRUE;
-//                                printf("~%d~ ", neighbors[i][m]);
                             } else if (neighbors[i][m] == -1) {
                                 neighbors[i][m] = j;
                                 exists = TRUE;
-//                                printf("#%d# ", neighbors[i][m]);
-                            } else {
-//                                printf("%d, ", neighbors[i][m]);
                             }
                         }
-//                        printf("\n");
                     }
                 }
             }
         }
     }
     
-//    for(i=0; i < NF; i++) {
-//        printf("n[%d] = ", i);
-//        for(j=0; j < NN; j++) {
-//            printf("%d, ", neighbors[i][j]);
-//        }
-//        printf("\n");
-//    }
-
 #define GL_VERTER_ARRAY(array) glVertex3f(array[0], array[1], array[2]) 
 #define GL_COLORS_ARRAY(array) glColor3f(array[0], array[1], array[2]) 
     
@@ -376,10 +307,14 @@ void renderScene(void) {
     glLoadIdentity();
     
     glScalef(s, s, s);
-    glTranslatef(tx, ty, tz);
     glRotatef(rx, 1.0, 0, 0);
     glRotatef(ry, 0, 1.0, 0);
     glRotatef(rz, 0, 0, 1.0);
+    
+    glRotatef(rrx, 1.0, 0, 0);
+    glRotatef(rry, 0, 1.0, 0);
+    glRotatef(rrz, 0, 0, 1.0);
+    
     drawObject();    
 
     glTranslatef(-1, -1, -1);
