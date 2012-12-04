@@ -30,6 +30,11 @@ float s=0.5;
 int r = 0;
 short timer = FALSE;
 
+float rrrz=90.0, rrrx=45.0;
+float sdepth = 10;
+short leftButton = FALSE, middleButton = FALSE;
+int downX, downY;
+
 void onKeyPress(unsigned char key, int keyX, int keyY) {
     switch (key) {
         case 'q':
@@ -330,6 +335,10 @@ void renderScene(void) {
     glRotatef(rx, 1.0, 0, 0);
     glRotatef(ry, 0, 1.0, 0);
     glRotatef(rz, 0, 0, 1.0);
+
+    printf("%f %f\n", rrrx, rrrz);
+    glRotatef(rrrx, 1.0, 0.0, 0.0);
+    glRotatef(rrrz, 0.0, 0.0, 1.0);
     
     glRotatef(rrx, 1.0, 0, 0);
     glRotatef(rry, 0, 1.0, 0);
@@ -341,6 +350,42 @@ void renderScene(void) {
     drawAxis();
     
     glutSwapBuffers();
+}
+
+/*
+ * Mouse 
+ */
+
+void MouseCallback(int button, int state, int x, int y) {
+  downX = x; downY = y;
+  leftButton = ((button == GLUT_LEFT_BUTTON) && (state == GLUT_DOWN));
+  middleButton = ((button == GLUT_MIDDLE_BUTTON) &&  (state == GLUT_DOWN));
+  glutPostRedisplay();}
+
+void MotionCallback(int x, int y) {
+  if (leftButton){
+      rrrx+=(float)(downY-y)/4.0;
+      if (rrrx < 180) {
+        rrrz+=(float)(x-downX)/4.0;
+      } else {
+          rrrz-=(float)(x-downX)/4.0;
+      }
+  }
+  if (rrrz > 360) {
+      rrrz -= 360;
+  }
+  if (rrrx > 360) {
+      rrrx -= 360;
+  }
+  if (rrrz < 0) {
+      rrrz += 360;
+  }
+  if (rrrx < 0) {
+      rrrx += 360;
+  }
+
+  downX = x;   downY = y; 
+  glutPostRedisplay();
 }
 
 
@@ -359,6 +404,8 @@ int main(int argc, char **argv) {
     // Register callbacks
     glutDisplayFunc(renderScene);
     glutKeyboardFunc(onKeyPress);
+    glutMouseFunc(MouseCallback);
+    glutMotionFunc(MotionCallback);
     glutTimerFunc(40,Timer,0);
     
     // Enter GLUT event processing cycle
