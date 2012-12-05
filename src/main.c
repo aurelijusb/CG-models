@@ -31,9 +31,10 @@ int r = 0;
 short timer = FALSE;
 
 float rrrz=90.0, rrrx=45.0;
+float vellocityZ = 0, vellocityX = 0; 
 float sdepth = 10;
-short leftButton = FALSE, middleButton = FALSE;
-int downX, downY;
+short leftButton = FALSE, middleButton = FALSE, leftButtonUp = FALSE;
+int downX, downY, lastX, lastY;
 
 void onKeyPress(unsigned char key, int keyX, int keyY) {
     switch (key) {
@@ -70,14 +71,6 @@ void onKeyPress(unsigned char key, int keyX, int keyY) {
             rx = 0;
             ry = 0;
             rz = 0;
-        break;
-        
-        case ' ':
-            if (timer) {
-                timer = FALSE;
-            } else {
-                timer = TRUE;
-            }
         break;
     }
     if (rx > 360) { rx -= 360; } else if (rx < 0) { rx += 360; }
@@ -313,12 +306,21 @@ void drawObject() {
 
 GLvoid Timer( int value )
 {
-    if (timer) {
-        rx += 2;
-        ry += 4;
-        rz += 6;
-        glutPostRedisplay();
-    }
+//    if (timer) {
+//        rx += 2;
+//        ry += 4;
+//        rz += 6;
+//        glutPostRedisplay();
+//    }
+//    vellocityX /= 2;
+//    vellocityZ /= 2;
+    
+    rrrx += vellocityX;
+    rrrz += vellocityZ;
+    vellocityX /= 1.1;
+    vellocityZ /= 1.1;
+    glutPostRedisplay();
+    
     glutTimerFunc(40,Timer,value);
 }
 
@@ -336,7 +338,18 @@ void renderScene(void) {
     glRotatef(ry, 0, 1.0, 0);
     glRotatef(rz, 0, 0, 1.0);
 
-    printf("%f %f\n", rrrx, rrrz);
+    if (rrrz > 360) {
+        rrrz -= 360;
+    }
+    if (rrrx > 360) {
+        rrrx -= 360;
+    }
+    if (rrrz < 0) {
+        rrrz += 360;
+    }
+    if (rrrx < 0) {
+        rrrx += 360;
+    }
     glRotatef(rrrx, 1.0, 0.0, 0.0);
     glRotatef(rrrz, 0.0, 0.0, 1.0);
     
@@ -357,35 +370,45 @@ void renderScene(void) {
  */
 
 void MouseCallback(int button, int state, int x, int y) {
-  downX = x; downY = y;
-  leftButton = ((button == GLUT_LEFT_BUTTON) && (state == GLUT_DOWN));
-  middleButton = ((button == GLUT_MIDDLE_BUTTON) &&  (state == GLUT_DOWN));
-  glutPostRedisplay();}
+    printf("B %d, st %d (%d, %d)\n", button, state, x, y);
 
+    leftButtonUp = ((button == GLUT_LEFT_BUTTON) && (state == GLUT_UP));
+    if (leftButtonUp) {
+        vellocityX+=(float)(lastY-y)/4.0;
+        if (rrrx < 180) {
+            vellocityZ+=(float)(x-lastX)/4.0;
+        } else {
+            vellocityZ-=(float)(x-lastX)/4.0;
+        }
+    } else {
+        vellocityX /= 4;
+        vellocityZ /= 4;
+    }
+
+    downX = x; downY = y;
+    leftButton = ((button == GLUT_LEFT_BUTTON) && (state == GLUT_DOWN));
+    middleButton = ((button == GLUT_MIDDLE_BUTTON) &&  (state == GLUT_DOWN));
+    glutPostRedisplay();
+}
+
+    
 void MotionCallback(int x, int y) {
-  if (leftButton){
-      rrrx+=(float)(downY-y)/4.0;
-      if (rrrx < 180) {
-        rrrz+=(float)(x-downX)/4.0;
-      } else {
-          rrrz-=(float)(x-downX)/4.0;
-      }
-  }
-  if (rrrz > 360) {
-      rrrz -= 360;
-  }
-  if (rrrx > 360) {
-      rrrx -= 360;
-  }
-  if (rrrz < 0) {
-      rrrz += 360;
-  }
-  if (rrrx < 0) {
-      rrrx += 360;
-  }
-
-  downX = x;   downY = y; 
-  glutPostRedisplay();
+    printf("M (%d, %d) - %d %d | %d %d\n", x, y, downX, downY, lastX, lastY);
+    if (leftButton) {
+        rrrx+=(float)(downY-y)/4.0;
+        if (rrrx < 180) {
+          rrrz+=(float)(x-downX)/4.0;
+        } else {
+            rrrz-=(float)(x-downX)/4.0;
+        }
+        vellocityX /= 4;
+        vellocityZ /= 4;
+    }
+    
+    lastX = downX;
+    lastY = downY;
+    downX = x;   downY = y; 
+    glutPostRedisplay();
 }
 
 
