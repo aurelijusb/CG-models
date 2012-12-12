@@ -17,71 +17,36 @@
 #include <GL/glut.h>
 #include <math.h>
 #include <stdio.h>
-
-#define KEY_ESCAPE 27
-#define KEY_ENTER 13
-
+//
+//#define KEY_ESCAPE 27
+//#define KEY_ENTER 13
+//
 #define FALSE 0
 #define TRUE 1
 
-int rx, ry, rz = 0;
-int rrx, rry, rrz = 0;
-float s=0.5;
-int r = 0;
-short timer = FALSE;
+#include <stdio.h>
+#include <stdlib.h>
+//#include <string.h>
+//#include <math.h>       /* for cos(), sin(), and sqrt() */
+//#include <GL/glut.h>
+#include "trackball.h"
 
-float rrrz=90.0, rrrx=45.0;
-float vellocityZ = 0, vellocityX = 0; 
-float sdepth = 10;
-short leftButton = FALSE, middleButton = FALSE, leftButtonUp = FALSE;
-int downX, downY, lastX, lastY;
+GLfloat angle = -150;   /* in degrees */
+GLboolean doubleBuffer = GL_TRUE, iconic = GL_FALSE, keepAspect = GL_FALSE;
+int spinning = 0, moving = 0;
+int beginx, beginy;
+int W = 300, H = 300;
+float empty[4];
+float curquat[4];
+float lastquat[4];
+GLdouble bodyWidth = 3.0;
+int newModel = 1;
+int scaling;
+float scalefactor = 1.0;
 
-void onKeyPress(unsigned char key, int keyX, int keyY) {
-    switch (key) {
-        case 'q':
-            rx--;
-        break;
-        case 'w':
-            rx++;
-        break;
-        case 'a':
-            ry--;
-        break;
-        case 's':
-            ry++;
-        break;
-        case 'z':
-            rz--;
-        break;
-        case 'x':
-            rz++;
-        break;
-              
-        case '1':
-            rrx += 180;
-        break;
-        case '2':
-            rry += 180;
-        break;
-        case '3':
-            rrz += 180;
-        break;
-        
-        case KEY_ENTER:
-            rx = 0;
-            ry = 0;
-            rz = 0;
-        break;
-    }
-    if (rx > 360) { rx -= 360; } else if (rx < 0) { rx += 360; }
-    if (ry > 360) { ry -= 360; } else if (ry < 0) { ry += 360; }
-    if (rz > 360) { rz -= 360; } else if (rz < 0) { rz += 360; }
-    if (rrx > 360) { rrx -= 360; } else if (rrx < 0) { rrx += 360; }
-    if (rry > 360) { rry -= 360; } else if (rry < 0) { rry += 360; }
-    if (rrz > 360) { rrz -= 360; } else if (rrz < 0) { rrz += 360; }
-    glutPostRedisplay();
-//    printf("Rot (%d, %d, %d) Translate (%d, %d, %d)\n", rx, ry, rz, tx, ty, tz);
-}
+/*
+ * Models
+ */
 
 void drawAxis() {
     // X (by y)
@@ -124,9 +89,9 @@ void drawObject() {
     int i, j, k, l, m;
     
     float phi = (1+sqrt(5))/2;
-    float phi1 = phi / 5;
-    float phi2 = phi*phi / 5;
-    float phi3 = phi*phi*phi / 5;
+    float phi1 = phi;
+    float phi2 = phi*phi;
+    float phi3 = phi*phi*phi;
     
 #define NV 32
     float vertexes[NV][3] = {{phi2, phi2, phi2}, 
@@ -270,29 +235,19 @@ void drawObject() {
     for (i=0; i < NF; i++) {
         // Colors
         short found = FALSE;
-//        printf("c[%d]:\n", i);
         for (j = 0; j < NC && !found; j++) {
-//            printf("\tj=%d found=%d\n", j, found);
             short inUse = FALSE;
             for (k = 0; k < NN && neighbors[i][k] != -1 && !inUse; k++) {
-//                printf("\t\tn[%d][%d]  c[%d]=%d\n", i, k, neighbors[i][k], colors[neighbors[i][k]]);
                 if (colors[neighbors[i][k]] == j) {
                     inUse = TRUE;
                 }
-//                printf("\t\t n[%d][%d] c[%d]=%d inUse=%d\n", i, k, neighbors[i][k], colors[neighbors[i][k]], inUse);
             }
             if (!inUse) {
                 colors[i] = j;
-//                printf("\t\t\t c[%d] = %d\n", i, j);
                 found = TRUE;
             } else {
-//                printf("\t\t\t Cont c[%d] = %d\n", neighbors[i][k], colors[neighbors[i][k]]);
             }
         }
-    }
-    
-    for (i=0; i < NF; i++) {
-//        printf("c[%d] %d\n", i, colors[i]);
     }
     
     for (i=0; i < NF; i++) {
@@ -303,138 +258,140 @@ void drawObject() {
             }
         glEnd();
     }
-    
-//    exit(0);
 }
 
+/*
+ * Events
+ * 
+ */
 
-GLvoid Timer( int value )
-{
-//    if (timer) {
-//        rx += 2;
-//        ry += 4;
-//        rz += 6;
-//        glutPostRedisplay();
-//    }
-//    vellocityX /= 2;
-//    vellocityZ /= 2;
-    
-    rrrx += vellocityX;
-    rrrz += vellocityZ;
-    vellocityX /= 1.1;
-    vellocityZ /= 1.1;
+void onKeyPress(unsigned char key, int keyX, int keyY) {
     glutPostRedisplay();
-    
-    glutTimerFunc(40,Timer,value);
 }
 
-/*
- * Main drawing loop
- */
-void renderScene(void) {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    
-    glScalef(s, s, s);
-    glRotatef(rx, 1.0, 0, 0);
-    glRotatef(ry, 0, 1.0, 0);
-    glRotatef(rz, 0, 0, 1.0);
-
-    if (rrrz > 360) {
-        rrrz -= 360;
-    }
-    if (rrrx > 360) {
-        rrrx -= 360;
-    }
-    if (rrrz < 0) {
-        rrrz += 360;
-    }
-    if (rrrx < 0) {
-        rrrx += 360;
-    }
-    glRotatef(rrrx, 1.0, 0.0, 0.0);
-    glRotatef(rrrz, 0.0, 0.0, 1.0);
-    
-    glRotatef(rrx, 1.0, 0, 0);
-    glRotatef(rry, 0, 1.0, 0);
-    glRotatef(rrz, 0, 0, 1.0);
-    
-    drawObject();    
-
-    glTranslatef(-1, -1, -1);
-    drawAxis();
-    
-    glutSwapBuffers();
-}
-
-/*
- * Mouse 
- */
-
-void MouseCallback(int button, int state, int x, int y) {
-    leftButtonUp = ((button == GLUT_LEFT_BUTTON) && (state == GLUT_UP));
-    if (leftButtonUp) {
-        vellocityX+=(float)(lastY-y)/4.0;
-        if (rrrx < 180) {
-            vellocityZ+=(float)(x-lastX)/4.0;
-        } else {
-            vellocityZ-=(float)(x-lastX)/4.0;
-        }
+void mouse(int button, int state, int x, int y) {
+  if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+    spinning = 0;
+    glutIdleFunc(NULL);
+    moving = 1;
+    beginx = x;
+    beginy = y;
+    if (glutGetModifiers() & GLUT_ACTIVE_SHIFT) {
+      scaling = 1;
     } else {
-        vellocityX /= 4;
-        vellocityZ /= 4;
+      scaling = 0;
     }
-
-    downX = x; downY = y;
-    leftButton = ((button == GLUT_LEFT_BUTTON) && (state == GLUT_DOWN));
-    middleButton = ((button == GLUT_MIDDLE_BUTTON) &&  (state == GLUT_DOWN));
-    glutPostRedisplay();
+  }
+  if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
+    moving = 0;
+    newModel = 0;
+  }
 }
 
-    
-void MotionCallback(int x, int y) {
-    if (leftButton) {
-        rrrx+=(float)(downY-y)/4.0;
-        if (rrrx < 180) {
-          rrrz+=(float)(x-downX)/4.0;
-        } else {
-            rrrz-=(float)(x-downX)/4.0;
-        }
-        vellocityX /= 4;
-        vellocityZ /= 4;
-    }
-    
-    lastX = downX;
-    lastY = downY;
-    downX = x;   downY = y; 
+void motion(int x, int y) {
+  if (scaling) {
+    scalefactor = scalefactor * (1.0 + (((float) (beginy - y)) / H));
+    beginx = x;
+    beginy = y;
+    newModel = 1;
     glutPostRedisplay();
+    return;
+  }
+  if (moving) {
+    trackball(lastquat,
+      (2.0 * beginx - W) / W,
+      (H - 2.0 * beginy) / H,
+      (2.0 * x - W) / W,
+      (H - 2.0 * y) / H
+      );
+    beginx = x;
+    beginy = y;
+    add_quats(lastquat, curquat, curquat);
+    newModel = 1;
+    glutPostRedisplay();
+  }
 }
 
 
 /*
- * Initiating OpenGl
+ * Matrixes and quarterions
  */
-int main(int argc, char **argv) {
-    // Init GLUT and create Window
-    glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-    glutInitWindowPosition(100,400);
-    glutInitWindowSize(640,640);
-    glutCreateWindow("U3");    
-    glEnable(GL_DEPTH_TEST);
-    
-    // Register callbacks
-    glutDisplayFunc(renderScene);
-    glutKeyboardFunc(onKeyPress);
-    glutMouseFunc(MouseCallback);
-    glutMotionFunc(MotionCallback);
-    glutTimerFunc(40,Timer,0);
-    
-    // Enter GLUT event processing cycle
-    glutMainLoop();
-    
 
-    return 0;
+void recalcModelView() {
+  GLfloat m[4][4];
+
+  glPopMatrix();
+  glPushMatrix();
+  build_rotmatrix(m, curquat);
+  glMultMatrixf(&m[0][0]);
+  if (scalefactor == 1.0) {
+    glDisable(GL_NORMALIZE);
+  } else {
+    glEnable(GL_NORMALIZE);
+  }
+  glScalef(scalefactor, scalefactor, scalefactor);
+  newModel = 0;
+}
+
+void redraw() {
+  GLfloat m[4][4];
+    
+  if (newModel)
+    recalcModelView();
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  drawObject();
+  
+    glPopMatrix();
+    glPushMatrix();
+    build_rotmatrix(m, empty);
+    glMultMatrixf(&m[0][0]);
+
+    glTranslatef(-5, -5, -1);
+    glScalef(4,4,4);
+    drawAxis();
+  
+    glPopMatrix();
+    glPushMatrix();
+    
+    build_rotmatrix(m, curquat);
+    glMultMatrixf(&m[0][0]);
+    
+  glutSwapBuffers();
+}
+
+/*
+ * General
+ */
+
+void myReshape(int w, int h) {
+  glViewport(0, 0, w, h);
+  W = w;
+  H = h;
+}
+
+int main(int argc, char **argv) {
+  glutInit(&argc, argv);
+  glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE);
+  trackball(curquat, 0.0, 0.0, 0.0, 0.0);
+  trackball(empty, 0.0, 0.0, 0.0, 0.0);
+  glutCreateWindow("U3");
+  glutDisplayFunc(redraw);
+  glutReshapeFunc(myReshape);
+  glutMouseFunc(mouse);
+  glutMotionFunc(motion);
+  glEnable(GL_DEPTH_TEST);
+  glMatrixMode(GL_PROJECTION);
+  gluPerspective( /* field of view in degree */ 40.0,
+  /* aspect ratio */ 1.0,
+    /* Z near */ 1.0, /* Z far */ 40.0);
+  glMatrixMode(GL_MODELVIEW);
+  glutKeyboardFunc(onKeyPress);
+  gluLookAt(0.0, 0.0, 30.0,  /* eye is at (0,0,30) */
+    0.0, 0.0, 0.0,      /* center is at (0,0,0) */
+    0.0, 1.0, 0.);      /* up is in positive Y direction */
+  glPushMatrix();       /* dummy push so we can pop on model recalc */
+  glutMainLoop();
+  
+  
+  return 0;
 }
