@@ -35,7 +35,7 @@ GLfloat angle = -150;   /* in degrees */
 GLboolean doubleBuffer = GL_TRUE, iconic = GL_FALSE, keepAspect = GL_FALSE;
 int spinning = 0, moving = 0;
 int beginx, beginy;
-int W = 300, H = 300;
+int W = 600, H = 600;
 float empty[4];
 float curquat[4];
 float lastquat[4];
@@ -43,6 +43,10 @@ GLdouble bodyWidth = 3.0;
 int newModel = 1;
 int scaling;
 float scalefactor = 1.0;
+int rx1, rx2 = 0;
+int ry1, ry2 = 0;
+int rz1, rz2 = 0;
+short showAxis = 0;
 
 /*
  * Models
@@ -266,6 +270,30 @@ void drawObject() {
  */
 
 void onKeyPress(unsigned char key, int keyX, int keyY) {
+    switch(key) {
+        case '1':
+            showAxis = showAxis == 0?1:0;
+            printf("%d\n", showAxis);
+        break;
+        case 'q':
+            rx2 -= 180;
+        break;
+        case 'w':
+            rx2 += 180;
+        break;
+        case 'a':
+            ry2 -= 180;
+        break;
+        case 's':
+            ry2 += 180;
+        break;
+        case 'z':
+            rz2 -= 180;
+        break;
+        case 'x':
+            rz2 += 180;
+        break;
+    }
     glutPostRedisplay();
 }
 
@@ -339,7 +367,14 @@ void redraw() {
   if (newModel)
     recalcModelView();
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glRotatef(rx1, 1, 0, 0);
+  glRotatef(ry1, 0, 1, 0);
+  glRotatef(rz1, 0, 0, 1);
   drawObject();
+  if (showAxis) {
+      glScalef(10, 10, 10);
+      drawAxis();
+  }
   
     glPopMatrix();
     glPushMatrix();
@@ -363,6 +398,65 @@ void redraw() {
  * General
  */
 
+static void timerCallback (int value) {
+//    if (rx1 >= 360) {
+//        rx1 -= 360;
+//    }
+//    if (ry1 >= 360) {
+//        ry1 -= 360;
+//    }
+//    if (rz1 >= 360) {
+//        rz1 -= 360;
+//    }
+//    if (rx1 < 0) {
+//        rx1 += 360;
+//    }
+//    if (ry1 <= 360) {
+//        ry1 += 360;
+//    }
+//    if (rz1 <= 360) {
+//        rz1 += 360;
+//    }
+//    if (rx2 >= 360) {
+//        rx2 -= 360;
+//    }
+//    if (ry2 >= 360) {
+//        ry2 -= 360;
+//    }
+//    if (rz2 >= 360) {
+//        rz2 -= 360;
+//    }
+//    if (rx2 < 0) {
+//        rx2 += 360;
+//    }
+//    if (ry2 <= 360) {
+//        ry2 += 360;
+//    }
+//    if (rz2 <= 360) {
+//        rz2 += 360;
+//    }
+    int a = 5;
+    if (rx2 > rx1) {
+        rx1 += a;
+    } else if (rx2 < rx1) {
+        rx1 -= a;
+    }
+    if (ry2 > ry1) {
+        ry1 += a;
+    } else if (ry2 < ry1) {
+        ry1 -= a;
+    }
+    if (rz2 > rz1) {
+        rz1 += a;
+    } else if (rz2 < rz1) {
+        rz1 -= a;
+    }
+    printf("%d, %d | %d, %d | %d, %d\n", rx1, rx2, ry1, ry2, rz1, rz2);
+    
+    glutTimerFunc (40, timerCallback, value);
+    glutPostRedisplay();
+}
+
 void myReshape(int w, int h) {
   glViewport(0, 0, w, h);
   W = w;
@@ -374,11 +468,13 @@ int main(int argc, char **argv) {
   glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE);
   trackball(curquat, 0.0, 0.0, 0.0, 0.0);
   trackball(empty, 0.0, 0.0, 0.0, 0.0);
+  glutInitWindowSize(W,H);
   glutCreateWindow("U3");
   glutDisplayFunc(redraw);
   glutReshapeFunc(myReshape);
   glutMouseFunc(mouse);
   glutMotionFunc(motion);
+  glutTimerFunc (40, timerCallback, 0);
   glEnable(GL_DEPTH_TEST);
   glMatrixMode(GL_PROJECTION);
   gluPerspective( /* field of view in degree */ 40.0,
