@@ -19,3 +19,5 @@ References
  * http://uosis.mif.vu.lt/~rimask/destymas/kompiuterine-grafika-ps/3-uzd/
  * https://svn.blender.org/svnroot/bf-extensions/trunk/py/scripts/addons/add_mesh_solid.py
  * http://www.rwgrayprojects.com/rbfnotes/polyhed/PolyhedraData/RhombicTriaconta/RhombicTriaconta.pdf
+
+ * http://scv.bu.edu/documentation/software-help/graphics-programming/opengl_examples/materials/

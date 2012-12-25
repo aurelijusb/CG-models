@@ -39,6 +39,7 @@ int W = 600, H = 600;
 float empty[4];
 float curquat[4];
 float lastquat[4];
+float gamequat[4];
 GLdouble bodyWidth = 3.0;
 int newModel = 1;
 int scaling;
@@ -47,14 +48,13 @@ int rx1, rx2 = 0;
 int ry1, ry2 = 0;
 int rz1, rz2 = 0;
 short showAxis = 0;
+short game = 0;
 
 /*
  * Models
  */
 
-void drawAxis() {
-    // X (by y)
-    glColor3f(1, 0, 0);
+void drawYAxi() {
     glBegin(GL_LINE_LOOP);
         glVertex3f(0, 0, 0);
         glVertex3f(0, 0.8, 0);
@@ -63,30 +63,27 @@ void drawAxis() {
         glVertex3f(-0.2, 0.6, 0);
         glVertex3f(0, 0.8, 0);
     glEnd();
-    
+}
+
+void drawAxis() {
+    // X (by y)
+    glColor3f(1, 0, 0);
+    drawYAxi();
     
     //Y (by x)
     glColor3f(0, 1, 0);
-    glBegin(GL_LINE_LOOP);
-        glVertex3f(0, 0, 0);
-        glVertex3f(0.8, 0, 0);
-        glVertex3f(0.6, 0.2, 0);
-        glVertex3f(1, 0, 0);
-        glVertex3f(0.6, -0.2, 0);
-        glVertex3f(0.8, 0, 0);
-    glEnd();
-    
+    glPushMatrix();
+        glRotatef(-90, 0, 0, 1);
+        drawYAxi();
+    glPopMatrix();
     
     //Z (by XY)
     glColor3f(0.2, 0.2, 1);
-    glBegin(GL_LINE_LOOP);
-        glVertex3f(0, 0, 0);
-        glVertex3f(0, 0, 0.8);
-        glVertex3f(0.2, 0.2, 0.6);
-        glVertex3f(0, 0, 1);
-        glVertex3f(-0.2, -0.2, 0.6);
-        glVertex3f(0, 0, 0.8);
-    glEnd();
+    glPushMatrix();
+        glRotatef(-45, 0, 0, 1);
+        glRotatef(90, 1, 0, 0);
+        drawYAxi();
+    glPopMatrix();
 }
 
 void drawObject() {
@@ -264,6 +261,18 @@ void drawObject() {
     }
 }
 
+
+/*
+ * Game
+ */
+
+void initGame() {
+    int i;
+    for(i=0; i < 4; i++) {
+        gamequat[i] = lastquat[i];
+    }
+}
+
 /*
  * Events
  * 
@@ -273,7 +282,12 @@ void onKeyPress(unsigned char key, int keyX, int keyY) {
     switch(key) {
         case '1':
             showAxis = showAxis == 0?1:0;
-            printf("%d\n", showAxis);
+        break;
+        case '2':
+            game = game == 0?1:0;
+            if (game) {
+                initGame();
+            }
         break;
         case 'q':
             rx2 -= 180;
@@ -364,8 +378,9 @@ void recalcModelView() {
 void redraw() {
   GLfloat m[4][4];
     
-  if (newModel)
+  if (newModel) {
     recalcModelView();
+  }
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glRotatef(rx1, 1, 0, 0);
   glRotatef(ry1, 0, 1, 0);
@@ -385,6 +400,17 @@ void redraw() {
     glScalef(4,4,4);
     drawAxis();
   
+    /* Game */
+    if (game) {
+        glPopMatrix();
+        glPushMatrix();
+        build_rotmatrix(m, gamequat);
+        glTranslatef(5, 5, 0);
+        glMultMatrixf(&m[0][0]);
+        drawObject();
+    }
+    
+    
     glPopMatrix();
     glPushMatrix();
     
@@ -399,42 +425,6 @@ void redraw() {
  */
 
 static void timerCallback (int value) {
-//    if (rx1 >= 360) {
-//        rx1 -= 360;
-//    }
-//    if (ry1 >= 360) {
-//        ry1 -= 360;
-//    }
-//    if (rz1 >= 360) {
-//        rz1 -= 360;
-//    }
-//    if (rx1 < 0) {
-//        rx1 += 360;
-//    }
-//    if (ry1 <= 360) {
-//        ry1 += 360;
-//    }
-//    if (rz1 <= 360) {
-//        rz1 += 360;
-//    }
-//    if (rx2 >= 360) {
-//        rx2 -= 360;
-//    }
-//    if (ry2 >= 360) {
-//        ry2 -= 360;
-//    }
-//    if (rz2 >= 360) {
-//        rz2 -= 360;
-//    }
-//    if (rx2 < 0) {
-//        rx2 += 360;
-//    }
-//    if (ry2 <= 360) {
-//        ry2 += 360;
-//    }
-//    if (rz2 <= 360) {
-//        rz2 += 360;
-//    }
     int a = 5;
     if (rx2 > rx1) {
         rx1 += a;
@@ -451,7 +441,6 @@ static void timerCallback (int value) {
     } else if (rz2 < rz1) {
         rz1 -= a;
     }
-    printf("%d, %d | %d, %d | %d, %d\n", rx1, rx2, ry1, ry2, rz1, rz2);
     
     glutTimerFunc (40, timerCallback, value);
     glutPostRedisplay();
@@ -468,6 +457,7 @@ int main(int argc, char **argv) {
   glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE);
   trackball(curquat, 0.0, 0.0, 0.0, 0.0);
   trackball(empty, 0.0, 0.0, 0.0, 0.0);
+  trackball(gamequat, 0.0, 0.0, 0.0, 0.0);
   glutInitWindowSize(W,H);
   glutCreateWindow("U3");
   glutDisplayFunc(redraw);
