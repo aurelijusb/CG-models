@@ -31,6 +31,23 @@
 //#include <GL/glut.h>
 #include "trackball.h"
 
+#define PI 3.141592653589793
+#define RAD(ange) (ange * PI / 180.0)
+#define SIN_21 0.3583679495453
+#define COS_21 0.9335804264972
+#define SIN_58 0.8480480961564
+#define COS_58 0.5299192642332
+
+GLfloat axis[3][3] = {{0, 1, 0},
+                      {SIN_21, COS_21, 0},
+                      {SIN_58, COS_58, 0},
+                     };
+GLfloat axis2[3][3] = {{0, 1, 0},
+                      {SIN_21, COS_21, 0},
+                      {SIN_58, COS_58, 0},
+                     };
+int angles[3] = {180, 120, 72};
+
 GLfloat angle = -150;   /* in degrees */
 GLboolean doubleBuffer = GL_TRUE, iconic = GL_FALSE, keepAspect = GL_FALSE;
 int spinning = 0, moving = 0;
@@ -44,37 +61,68 @@ GLdouble bodyWidth = 3.0;
 int newModel = 1;
 int scaling;
 float scalefactor = 1.0;
-int rx1, rx2 = 0;
-int ry1, ry2 = 0;
-int rz1, rz2 = 0;
+int r[3][2] = {{0, 0}, {0, 0}, {0, 0}};
 short showAxis = 0;
 short game = 0;
+
+#define NV 32
+#define PHI1 1.6180339887499
+#define PHI2 (PHI1*PHI1)
+#define PHI3 (PHI1*PHI1*PHI1)
+float vertexes[NV][3] = {{PHI2, PHI2, PHI2}, 
+                        {PHI2, PHI2, -PHI2}, 
+                        {PHI2, -PHI2, PHI2}, 
+                        {PHI2, -PHI2, -PHI2}, 
+                        {-PHI2, PHI2, PHI2}, 
+                        {-PHI2, PHI2, -PHI2}, 
+                        {-PHI2, -PHI2, PHI2}, 
+                        {-PHI2, -PHI2, -PHI2}, 
+                        {PHI1, PHI3, -0.00}, 
+                        {-PHI1, PHI3, -0.00}, 
+                        {PHI1, -PHI3, -0.00}, 
+                        {-PHI1, -PHI3, 0.000}, 
+                        {PHI3, -0.00, PHI1}, 
+                        {PHI3, -0.00, -PHI1}, 
+                        {-PHI3, -0.00, PHI1}, 
+                        {-PHI3, 0.000, -PHI1}, 
+                        {-0.00, PHI1, PHI3}, 
+                        {-0.00, -PHI1, PHI3}, 
+                        {-0.00, PHI1, -PHI3}, 
+                        {0.000, -PHI1, -PHI3}, 
+                        {-0.00, PHI3, PHI2}, 
+                        {PHI3, PHI2, -0.00}, 
+                        {PHI2, -0.00, PHI3}, 
+                        {-0.00, PHI3, -PHI2}, 
+                        {PHI3, -PHI2, -0.00}, 
+                        {-PHI2, -0.00, PHI3}, 
+                        {-PHI3, PHI2, -0.00}, 
+                        {-0.00, -PHI3, PHI2}, 
+                        {PHI2, -0.00, -PHI3}, 
+                        {-PHI2, -0.00, -PHI3}, 
+                        {-PHI3, -PHI2, -0.00}, 
+                        {-0.00, -PHI3, -PHI2}};
 
 /*
  * Models
  */
 
-void drawYAxi() {
+void drawLineY() {
     glBegin(GL_LINE_LOOP);
         glVertex3f(0, 0, 0);
-        glVertex3f(0, 0.8, 0);
-        glVertex3f(0.2, 0.6, 0);
         glVertex3f(0, 1, 0);
-        glVertex3f(-0.2, 0.6, 0);
-        glVertex3f(0, 0.8, 0);
     glEnd();
 }
 
 void drawAxis() {
     // X (by y)
     glColor3f(1, 0, 0);
-    drawYAxi();
+    drawLineY();
     
     //Y (by x)
     glColor3f(0, 1, 0);
     glPushMatrix();
         glRotatef(-90, 0, 0, 1);
-        drawYAxi();
+        drawLineY();
     glPopMatrix();
     
     //Z (by XY)
@@ -82,8 +130,25 @@ void drawAxis() {
     glPushMatrix();
         glRotatef(-45, 0, 0, 1);
         glRotatef(90, 1, 0, 0);
-        drawYAxi();
+        drawLineY();
     glPopMatrix();
+}
+
+void drawRotationAxis() {
+    float colors[3][3] = {{0.5, 0, 0},
+                          {0, 0.5, 0},
+                          {0, 0, 0.5}
+                         };
+    const int n = 3;
+    int i;
+    int radius = 10;
+    for (i = 0; i < n; i++) {
+        glColor3f(colors[i][0], colors[i][1], colors[i][2]);
+        glBegin(GL_LINE_LOOP);
+            glVertex3f(0, 0, 0);
+            glVertex3f(axis[i][0] * radius, axis[i][1] * radius, axis[i][2] * radius);
+        glEnd();
+    }
 }
 
 void drawObject() {
@@ -92,41 +157,7 @@ void drawObject() {
     float phi = (1+sqrt(5))/2;
     float phi1 = phi;
     float phi2 = phi*phi;
-    float phi3 = phi*phi*phi;
-    
-#define NV 32
-    float vertexes[NV][3] = {{phi2, phi2, phi2}, 
-                            {phi2, phi2, -phi2}, 
-                            {phi2, -phi2, phi2}, 
-                            {phi2, -phi2, -phi2}, 
-                            {-phi2, phi2, phi2}, 
-                            {-phi2, phi2, -phi2}, 
-                            {-phi2, -phi2, phi2}, 
-                            {-phi2, -phi2, -phi2}, 
-                            {phi1, phi3, -0.00}, 
-                            {-phi1, phi3, -0.00}, 
-                            {phi1, -phi3, -0.00}, 
-                            {-phi1, -phi3, 0.000}, 
-                            {phi3, -0.00, phi1}, 
-                            {phi3, -0.00, -phi1}, 
-                            {-phi3, -0.00, phi1}, 
-                            {-phi3, 0.000, -phi1}, 
-                            {-0.00, phi1, phi3}, 
-                            {-0.00, -phi1, phi3}, 
-                            {-0.00, phi1, -phi3}, 
-                            {0.000, -phi1, -phi3}, 
-                            {-0.00, phi3, phi2}, 
-                            {phi3, phi2, -0.00}, 
-                            {phi2, -0.00, phi3}, 
-                            {-0.00, phi3, -phi2}, 
-                            {phi3, -phi2, -0.00}, 
-                            {-phi2, -0.00, phi3}, 
-                            {-phi3, phi2, -0.00}, 
-                            {-0.00, -phi3, phi2}, 
-                            {phi2, -0.00, -phi3}, 
-                            {-phi2, -0.00, -phi3}, 
-                            {-phi3, -phi2, -0.00}, 
-                            {-0.00, -phi3, -phi2}};   
+    float phi3 = phi*phi*phi;  
     
 #define NF 30
     
@@ -252,7 +283,11 @@ void drawObject() {
     }
     
     for (i=0; i < NF; i++) {
-        GL_COLORS_ARRAY(available_colors[colors[i]]);
+//        if (i == 0) {
+//            GL_COLORS_ARRAY(available_colors[NC-1]);
+//        } else {
+            GL_COLORS_ARRAY(available_colors[colors[i]]);
+//        }
         glBegin(GL_POLYGON);
             for (j=0; j<4; j++) {
                 GL_VERTER_ARRAY(vertexes[faces[i][j]]);
@@ -290,22 +325,22 @@ void onKeyPress(unsigned char key, int keyX, int keyY) {
             }
         break;
         case 'q':
-            rx2 -= 180;
+            r[0][1] = r[0][1] - angles[0];
         break;
         case 'w':
-            rx2 += 180;
+            r[0][1] += angles[0];
         break;
         case 'a':
-            ry2 -= 180;
+            r[1][1] -= angles[1];
         break;
         case 's':
-            ry2 += 180;
+            r[1][1] += angles[1];
         break;
         case 'z':
-            rz2 -= 180;
+            r[2][1] -= angles[2];
         break;
         case 'x':
-            rz2 += 180;
+            r[2][1] += angles[2];
         break;
     }
     glutPostRedisplay();
@@ -375,21 +410,105 @@ void recalcModelView() {
   newModel = 0;
 }
 
-void redraw() {
-  GLfloat m[4][4];
+void multiply(float m[4][4], float c[3], float r[3]) {
+    float c2[4] = {c[0], c[1], c[2], 1};
+    float r2[4] = {0};
     
-  if (newModel) {
-    recalcModelView();
-  }
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glRotatef(rx1, 1, 0, 0);
-  glRotatef(ry1, 0, 1, 0);
-  glRotatef(rz1, 0, 0, 1);
-  drawObject();
-  if (showAxis) {
-      glScalef(10, 10, 10);
-      drawAxis();
-  }
+    int x, y;
+    for (x=0; x<4; x++) {
+        for (y=0; y<4; y++) {
+            r2[y] += m[y][x]*c2[x];
+        }        
+    }
+    
+    for (y=0; y<3; y++) {
+        r[y] = r2[y] / r2[3];
+    }
+}
+
+void drawRotationAxis2() {
+    float colors[3][3] = {{0.5, 0.3, 0.3},
+                          {0.3, 0.5, 0.3},
+                          {0.3, 0.3, 0.5}
+                         };
+    const int n = 3;
+    int i;
+    int radius = 10;
+    for (i = 0; i < n; i++) {
+        glColor3f(colors[i][0], colors[i][1], colors[i][2]);
+        glBegin(GL_LINE_LOOP);
+            glVertex3f(0, 0, 0);
+            glVertex3f(axis2[i][0] * radius, axis2[i][1] * radius, axis2[i][2] * radius);
+            glVertex3f(axis2[i][0] * radius+0.2, axis2[i][1] * radius+0.2, axis2[i][2] * radius+0.2);
+        glEnd();
+    }
+}
+
+void rotate(int by, float old[3][3], float new[3][3], float phi) {
+    GLfloat m[4][4];
+    float q[4] = {0};
+    int i,x,y;
+    for (i=0; i<4; i++) {
+        q[i] = 0;
+    }
+    axis_to_quat(old[by],RAD(phi), q);
+    build_rotmatrix(m, q);
+    
+    printf("______  %f  __________\n", phi);
+//    printf("A %f %f %f | O %f %f %f : %f %f %f\n", a[0], a[1], a[2], old[0][0], old[0][1], old[0][2], old[1][0], old[1][1], old[1][2]);
+    printf("Q %f %f %f %f\n", q[0], q[1], q[2], q[3]);
+    printf("Matrix:\n");
+    for(y=0; y<4; y++) {
+        for (x=0; x<4; x++) {
+            printf("  %f", m[y][x]);
+        }
+        printf("\n");
+    }
+    for (i=0; i<3; i++) {
+        if (i != by) {
+            printf(">>>Multipying: %d != %d\n", i, by);
+            multiply(m, old[i], new[i]);
+        }
+    }
+    
+    for (i=0; i<NV; i++) {
+        multiply(m, vertexes[i], vertexes[i]);
+    }
+    
+    printf("}[%f %f %f]\n", new[0][0], new[0][1], new[0][2]);
+}
+
+void manualRotate(float source[3], int angle, float result[3]) {
+    float x = source[0];
+    float y = source[1];
+    float z = source[2];
+    float c = cos(RAD(angle));
+    float s = sin(RAD(angle));
+    float m[4][4] = {{c + x*x*(1-c),    x*y*(1-c)-z*s,  x*z*(0-c)+y*s},
+                     {y*z*(1-c)+z*s,    c+y*y*(1-c),    x*z*(1-c)-x*s},
+                     {z*x*(1-c)-y*s,     z*y*(1-c)+x*s,  c+z*z*(1-c)}};
+//    multiply(m, result, result);
+}
+
+void redraw() {
+    GLfloat m[4][4];
+    if (newModel) {
+        recalcModelView();
+    }
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    int i;
+//    for (i=0; i<2; i++) {
+//        glRotatef(r[i][0], axis2[i][0], axis2[i][1], axis2[i][20]);
+//    }
+//    if (showAxis) {
+//        drawRotationAxis();
+//    }
+//    for (i=0; i<2; i++) {
+//        glRotatef(r[2-i][0], -axis2[2-i][0], -axis2[2-i][1], -axis2[2-i][20]);
+    drawRotationAxis2();
+//    }
+  
+    drawObject();
   
     glPopMatrix();
     glPushMatrix();
@@ -401,14 +520,20 @@ void redraw() {
     drawAxis();
   
     /* Game */
-    if (game) {
-        glPopMatrix();
-        glPushMatrix();
-        build_rotmatrix(m, gamequat);
-        glTranslatef(5, 5, 0);
-        glMultMatrixf(&m[0][0]);
-        drawObject();
-    }
+//    if (game) {
+//        glPopMatrix();
+//        glPushMatrix();
+//        build_rotmatrix(m, empty);
+//        glTranslatef(5, 5, 0);
+//        glMultMatrixf(&m[0][0]);
+//        
+//        glColor3f(1, 0, 1);
+//        float r = 6;
+//        glBegin(GL_LINE_LOOP);
+//            glVertex3f(0, 0, 0);
+//            glVertex3f(curquat[1] * r, curquat[2] * r, curquat[3] * r);
+//        glEnd();
+//    }
     
     
     glPopMatrix();
@@ -425,22 +550,20 @@ void redraw() {
  */
 
 static void timerCallback (int value) {
-    int a = 5;
-    if (rx2 > rx1) {
-        rx1 += a;
-    } else if (rx2 < rx1) {
-        rx1 -= a;
+    int a = 4;
+    int i;
+    for (i=0; i < 3; i++) {
+        if (r[i][1] > r[i][0]) {
+            r[i][0] += a;
+            rotate(i, axis2, axis2, a);
+        } else if (r[i][1] < r[i][0]) {
+            r[i][0] -= a;
+            rotate(i, axis2, axis2, -a);
+        }
     }
-    if (ry2 > ry1) {
-        ry1 += a;
-    } else if (ry2 < ry1) {
-        ry1 -= a;
-    }
-    if (rz2 > rz1) {
-        rz1 += a;
-    } else if (rz2 < rz1) {
-        rz1 -= a;
-    }
+//    printf("R %d->%d %d->%d %d->%d\n", r[0][0], r[0][1], r[1][0], r[1][1], r[2][0], r[2][1]);
+//    printf("\tQG %f %f %f %f\n", gamequat[0], gamequat[1], gamequat[2], gamequat[3]);
+//    printf("\tQC %f %f %f %f\n", curquat[0], curquat[1], curquat[2], curquat[3]);
     
     glutTimerFunc (40, timerCallback, value);
     glutPostRedisplay();
