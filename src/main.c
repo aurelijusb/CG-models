@@ -42,10 +42,6 @@ GLfloat axis[3][3] = {{0, 1, 0},
                       {SIN_21, COS_21, 0},
                       {SIN_58, COS_58, 0},
                      };
-GLfloat axis2[3][3] = {{0, 1, 0},
-                      {SIN_21, COS_21, 0},
-                      {SIN_58, COS_58, 0},
-                     };
 int angles[3] = {180, 120, 72};
 
 GLfloat angle = -150;   /* in degrees */
@@ -62,7 +58,7 @@ int newModel = 1;
 int scaling;
 float scalefactor = 1.0;
 int r[3][2] = {{0, 0}, {0, 0}, {0, 0}};
-short showAxis = 0;
+short showAxis = TRUE;
 short game = 0;
 
 #define NV 32
@@ -101,6 +97,53 @@ float vertexes[NV][3] = {{PHI2, PHI2, PHI2},
                         {-PHI2, -0.00, -PHI3}, 
                         {-PHI3, -PHI2, -0.00}, 
                         {-0.00, -PHI3, -PHI2}};
+
+#define NF 30
+short faces[NF][4] = {{0, 20, 16, 22}, 
+                      {0, 22, 12, 21}, 
+                      {0, 21, 8, 20}, 
+                      {1, 21, 13, 28}, 
+                      {1, 28, 18, 23}, 
+                      {1, 23, 8, 21}, 
+                      {2, 22, 17, 27}, 
+                      {2, 27, 10, 24}, 
+                      {2, 24, 12, 22}, 
+                      {3, 24, 10, 31}, 
+                      {3, 31, 19, 28}, 
+                      {3, 28, 13, 24}, 
+                      {4, 20, 9, 26}, 
+                      {4, 26, 14, 25}, 
+                      {4, 25, 16, 20}, 
+                      {5, 23, 18, 29}, 
+                      {5, 29, 15, 26}, 
+                      {5, 26, 9, 23}, 
+                      {6, 25, 14, 30}, 
+                      {6, 30, 11, 27}, 
+                      {6, 27, 17, 25}, 
+                      {7, 29, 19, 31}, 
+                      {7, 31, 11, 30}, 
+                      {7, 30, 15, 29}, 
+                      {8, 23, 9, 20}, 
+                      {10, 27, 11, 31}, 
+                      {12, 24, 13, 21}, 
+                      {14, 26, 15, 30}, 
+                      {16, 25, 17, 22}, 
+                      {18, 28, 19, 29}};
+
+#define NC 8
+    float available_colors[NC][3] ={{0, 0, 1}, 
+                                    {0, 1, 0},
+                                    {1, 0, 0},
+                                    {1, 1, 0},
+                                    {1, 0, 1},
+                                    {0, 1, 1},
+                                    {1, 0, 1},
+                                    {1, 1, 1}};
+
+    
+float exludedVertex[4][3] = {0};
+float originalVertex[4][3] = {0};
+int exluded = 1;
 
 /*
  * Models
@@ -151,7 +194,7 @@ void drawRotationAxis() {
     }
 }
 
-void drawObject() {
+void drawObject(float vertices[NV][3], int exclude) {
     int i, j, k, l, m;
     
     float phi = (1+sqrt(5))/2;
@@ -159,39 +202,6 @@ void drawObject() {
     float phi2 = phi*phi;
     float phi3 = phi*phi*phi;  
     
-#define NF 30
-    
-    short faces[NF][4] = {{0, 20, 16, 22}, 
-                          {0, 22, 12, 21}, 
-                          {0, 21, 8, 20}, 
-                          {1, 21, 13, 28}, 
-                          {1, 28, 18, 23}, 
-                          {1, 23, 8, 21}, 
-                          {2, 22, 17, 27}, 
-                          {2, 27, 10, 24}, 
-                          {2, 24, 12, 22}, 
-                          {3, 24, 10, 31}, 
-                          {3, 31, 19, 28}, 
-                          {3, 28, 13, 24}, 
-                          {4, 20, 9, 26}, 
-                          {4, 26, 14, 25}, 
-                          {4, 25, 16, 20}, 
-                          {5, 23, 18, 29}, 
-                          {5, 29, 15, 26}, 
-                          {5, 26, 9, 23}, 
-                          {6, 25, 14, 30}, 
-                          {6, 30, 11, 27}, 
-                          {6, 27, 17, 25}, 
-                          {7, 29, 19, 31}, 
-                          {7, 31, 11, 30}, 
-                          {7, 30, 15, 29}, 
-                          {8, 23, 9, 20}, 
-                          {10, 27, 11, 31}, 
-                          {12, 24, 13, 21}, 
-                          {14, 26, 15, 30}, 
-                          {16, 25, 17, 22}, 
-                          {18, 28, 19, 29}};
-
 #define NN 12
     short neighbors[NF][NN] = {0};
     for (i=0; i<NF; i++) {
@@ -199,7 +209,6 @@ void drawObject() {
             neighbors[i][j] = -1;
         }
     }
-
     
     //Source face
     for(i=0; i < NF; i++) {
@@ -249,15 +258,7 @@ void drawObject() {
         glEnd();
     }
     
-#define NC 8
-    float available_colors[NC][3] ={{0, 0, 1}, 
-                                    {0, 1, 0},
-                                    {1, 0, 0},
-                                    {1, 1, 0},
-                                    {1, 0, 1},
-                                    {0, 1, 1},
-                                    {1, 0, 1},
-                                    {1, 1, 1}};
+
     int colors[NF] = {0};
     for (i=0; i < NF; i++) {
         colors[i] = -1;
@@ -283,29 +284,152 @@ void drawObject() {
     }
     
     for (i=0; i < NF; i++) {
-//        if (i == 0) {
-//            GL_COLORS_ARRAY(available_colors[NC-1]);
-//        } else {
+        if (i != exclude) {
             GL_COLORS_ARRAY(available_colors[colors[i]]);
-//        }
-        glBegin(GL_POLYGON);
-            for (j=0; j<4; j++) {
-                GL_VERTER_ARRAY(vertexes[faces[i][j]]);
-            }
+            glBegin(GL_POLYGON);
+                for (j=0; j<4; j++) {
+                    GL_VERTER_ARRAY(vertexes[faces[i][j]]);
+                }
+            glEnd();
+        }
+    }
+}
+
+void drawExcluded() {
+    GL_COLORS_ARRAY(available_colors[NC-1]);
+    glBegin(GL_POLYGON);
+        int i;
+        for (i=0; i<4; i++) {
+            GL_VERTER_ARRAY(exludedVertex[i]);
+        }
+    glEnd();
+    
+    GL_COLORS_ARRAY(available_colors[NC-1]);
+    glBegin(GL_LINE_LOOP);
+        for (i=0; i<4; i++) {
+            GL_VERTER_ARRAY(originalVertex[i]);
+        }
+    glEnd();
+}
+
+
+
+/*
+ * Matrixes and quarterions
+ */
+
+void recalcModelView() {
+  GLfloat m[4][4];
+
+  glPopMatrix();
+  glPushMatrix();
+  build_rotmatrix(m, curquat);
+  glMultMatrixf(&m[0][0]);
+  if (scalefactor == 1.0) {
+    glDisable(GL_NORMALIZE);
+  } else {
+    glEnable(GL_NORMALIZE);
+  }
+  glScalef(scalefactor, scalefactor, scalefactor);
+  newModel = 0;
+}
+
+void multiply(float m[4][4], float c[3], float r[3]) {
+    float c2[4] = {c[0], c[1], c[2], 1};
+    float r2[4] = {0};
+    
+    int x, y;
+    for (x=0; x<4; x++) {
+        for (y=0; y<4; y++) {
+            r2[y] += m[y][x]*c2[x];
+        }        
+    }
+    
+    for (y=0; y<3; y++) {
+        r[y] = r2[y] / r2[3];
+    }
+}
+
+void drawRotationAxis2() {
+    float colors[3][3] = {{0.5, 0.3, 0.3},
+                          {0.3, 0.5, 0.3},
+                          {0.3, 0.3, 0.5}
+                         };
+    const int n = 3;
+    int i;
+    int radius = 10;
+    for (i = 0; i < n; i++) {
+        glColor3f(colors[i][0], colors[i][1], colors[i][2]);
+        glBegin(GL_LINE_LOOP);
+            glVertex3f(0, 0, 0);
+            glVertex3f(axis[i][0] * radius, axis[i][1] * radius, axis[i][2] * radius);
+            glVertex3f(axis[i][0] * radius+0.2, axis[i][1] * radius+0.2, axis[i][2] * radius+0.2);
         glEnd();
     }
 }
 
+void rotate(int by, float axis[3][3], int phi) {
+    GLfloat m[4][4];
+    float q[4] = {0};
+    int i;
+    for (i=0; i<4; i++) {
+        q[i] = 0;
+    }
+    axis_to_quat(axis[by],RAD(phi), q);
+    build_rotmatrix(m, q);
+    
+    for (i=0; i<3; i++) {
+        if (i != by) {
+            multiply(m, axis[i], axis[i]);
+        }
+    }
+    
+    for (i=0; i<NV; i++) {
+        multiply(m, vertexes[i], vertexes[i]);
+    }
+    for (i=0; i<4; i++) {
+        multiply(m, originalVertex[i], originalVertex[i]);
+    }
+}
 
 /*
  * Game
  */
 
 void initGame() {
-    int i;
-    for(i=0; i < 4; i++) {
-        gamequat[i] = lastquat[i];
+    int i, j;
+    float x = 0;
+    float y = 0;
+    float z = 0;
+    for (i=0; i<4; i++) {
+        for (j=0; j<3; j++) {
+            exludedVertex[i][j] = vertexes[faces[exluded][i]][j];
+        }
+        x += exludedVertex[i][0];
+        y += exludedVertex[i][1];
+        z += exludedVertex[i][2];
     }
+    x /= 3;
+    y /= 3;
+    z /= 3;
+    for (i=0; i<4; i++) {
+        exludedVertex[i][0] += x / 6;
+        exludedVertex[i][1] += y / 6;
+        exludedVertex[i][2] += z / 6;
+        for (j=0; j < 3; j++) {
+            originalVertex[i][j] = exludedVertex[i][j];
+        }
+    }
+    
+    for (i=0; i<2; i++) {
+        j = rand() % 3;
+        rotate(j, axis, angles[j]);
+        printf("Randomized: Axis %d by %d degrees\n", j, angles[j]);
+    }
+}
+
+void finishGame() {
+    game = FALSE;
 }
 
 /*
@@ -389,107 +513,6 @@ void motion(int x, int y) {
   }
 }
 
-
-/*
- * Matrixes and quarterions
- */
-
-void recalcModelView() {
-  GLfloat m[4][4];
-
-  glPopMatrix();
-  glPushMatrix();
-  build_rotmatrix(m, curquat);
-  glMultMatrixf(&m[0][0]);
-  if (scalefactor == 1.0) {
-    glDisable(GL_NORMALIZE);
-  } else {
-    glEnable(GL_NORMALIZE);
-  }
-  glScalef(scalefactor, scalefactor, scalefactor);
-  newModel = 0;
-}
-
-void multiply(float m[4][4], float c[3], float r[3]) {
-    float c2[4] = {c[0], c[1], c[2], 1};
-    float r2[4] = {0};
-    
-    int x, y;
-    for (x=0; x<4; x++) {
-        for (y=0; y<4; y++) {
-            r2[y] += m[y][x]*c2[x];
-        }        
-    }
-    
-    for (y=0; y<3; y++) {
-        r[y] = r2[y] / r2[3];
-    }
-}
-
-void drawRotationAxis2() {
-    float colors[3][3] = {{0.5, 0.3, 0.3},
-                          {0.3, 0.5, 0.3},
-                          {0.3, 0.3, 0.5}
-                         };
-    const int n = 3;
-    int i;
-    int radius = 10;
-    for (i = 0; i < n; i++) {
-        glColor3f(colors[i][0], colors[i][1], colors[i][2]);
-        glBegin(GL_LINE_LOOP);
-            glVertex3f(0, 0, 0);
-            glVertex3f(axis2[i][0] * radius, axis2[i][1] * radius, axis2[i][2] * radius);
-            glVertex3f(axis2[i][0] * radius+0.2, axis2[i][1] * radius+0.2, axis2[i][2] * radius+0.2);
-        glEnd();
-    }
-}
-
-void rotate(int by, float old[3][3], float new[3][3], float phi) {
-    GLfloat m[4][4];
-    float q[4] = {0};
-    int i,x,y;
-    for (i=0; i<4; i++) {
-        q[i] = 0;
-    }
-    axis_to_quat(old[by],RAD(phi), q);
-    build_rotmatrix(m, q);
-    
-    printf("______  %f  __________\n", phi);
-//    printf("A %f %f %f | O %f %f %f : %f %f %f\n", a[0], a[1], a[2], old[0][0], old[0][1], old[0][2], old[1][0], old[1][1], old[1][2]);
-    printf("Q %f %f %f %f\n", q[0], q[1], q[2], q[3]);
-    printf("Matrix:\n");
-    for(y=0; y<4; y++) {
-        for (x=0; x<4; x++) {
-            printf("  %f", m[y][x]);
-        }
-        printf("\n");
-    }
-    for (i=0; i<3; i++) {
-        if (i != by) {
-            printf(">>>Multipying: %d != %d\n", i, by);
-            multiply(m, old[i], new[i]);
-        }
-    }
-    
-    for (i=0; i<NV; i++) {
-        multiply(m, vertexes[i], vertexes[i]);
-    }
-    
-    printf("}[%f %f %f]\n", new[0][0], new[0][1], new[0][2]);
-}
-
-void manualRotate(float source[3], int angle, float result[3]) {
-    float x = source[0];
-    float y = source[1];
-    float z = source[2];
-    float c = cos(RAD(angle));
-    float s = sin(RAD(angle));
-    float m[4][4] = {{c + x*x*(1-c),    x*y*(1-c)-z*s,  x*z*(0-c)+y*s},
-                     {y*z*(1-c)+z*s,    c+y*y*(1-c),    x*z*(1-c)-x*s},
-                     {z*x*(1-c)-y*s,     z*y*(1-c)+x*s,  c+z*z*(1-c)}};
-//    multiply(m, result, result);
-}
-
 void redraw() {
     GLfloat m[4][4];
     if (newModel) {
@@ -497,43 +520,17 @@ void redraw() {
     }
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     int i;
-//    for (i=0; i<2; i++) {
-//        glRotatef(r[i][0], axis2[i][0], axis2[i][1], axis2[i][20]);
-//    }
-//    if (showAxis) {
-//        drawRotationAxis();
-//    }
-//    for (i=0; i<2; i++) {
-//        glRotatef(r[2-i][0], -axis2[2-i][0], -axis2[2-i][1], -axis2[2-i][20]);
-    drawRotationAxis2();
-//    }
-  
-    drawObject();
-  
-    glPopMatrix();
-    glPushMatrix();
-    build_rotmatrix(m, empty);
-    glMultMatrixf(&m[0][0]);
-
-    glTranslatef(-5, -5, -1);
-    glScalef(4,4,4);
-    drawAxis();
-  
-    /* Game */
-//    if (game) {
-//        glPopMatrix();
-//        glPushMatrix();
-//        build_rotmatrix(m, empty);
-//        glTranslatef(5, 5, 0);
-//        glMultMatrixf(&m[0][0]);
-//        
-//        glColor3f(1, 0, 1);
-//        float r = 6;
-//        glBegin(GL_LINE_LOOP);
-//            glVertex3f(0, 0, 0);
-//            glVertex3f(curquat[1] * r, curquat[2] * r, curquat[3] * r);
-//        glEnd();
-//    }
+    
+    if (showAxis) {
+        drawRotationAxis2();
+    }
+    
+    if (game) {
+        drawObject(vertexes, exluded);
+        drawExcluded();
+    } else {
+        drawObject(vertexes, -1);
+    }
     
     
     glPopMatrix();
@@ -555,15 +552,41 @@ static void timerCallback (int value) {
     for (i=0; i < 3; i++) {
         if (r[i][1] > r[i][0]) {
             r[i][0] += a;
-            rotate(i, axis2, axis2, a);
+            rotate(i, axis, a);
         } else if (r[i][1] < r[i][0]) {
             r[i][0] -= a;
-            rotate(i, axis2, axis2, -a);
+            rotate(i, axis, -a);
         }
     }
-//    printf("R %d->%d %d->%d %d->%d\n", r[0][0], r[0][1], r[1][0], r[1][1], r[2][0], r[2][1]);
-//    printf("\tQG %f %f %f %f\n", gamequat[0], gamequat[1], gamequat[2], gamequat[3]);
-//    printf("\tQC %f %f %f %f\n", curquat[0], curquat[1], curquat[2], curquat[3]);
+    
+    if (game) {
+        short found = TRUE;
+        float approximate = 0.004;
+        int i, j;
+        for (i=0; i<4 && found; i++) {
+            for (j=0; j < 3 && found; j++) {
+                float difference = abs(originalVertex[i][j] - exludedVertex[i][j]);
+                if (difference > approximate) {
+                    found = FALSE;
+                }
+            }
+        }
+        if (!found) {
+            found = TRUE;            
+            for (i=0; i<4 && found; i++) {
+                for (j=0; j < 3 && found; j++) {
+                    int i2 = i > 1 ? i - 2 : i + 2;
+                    float difference = abs(originalVertex[i][j] - exludedVertex[i2][j]);
+                    if (difference > approximate) {
+                        found = FALSE;
+                    }
+                }
+            }
+        }
+        if (found) {
+            finishGame();
+        }
+    }
     
     glutTimerFunc (40, timerCallback, value);
     glutPostRedisplay();
