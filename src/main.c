@@ -33,11 +33,12 @@
 #include "normals.h"
 
 #define PI 3.141592653589793
-#define RAD(ange) (ange * PI / 180.0)
+#define RAD(angle) (angle * PI / 180.0)
 #define SIN_21 0.3583679495453
 #define COS_21 0.9335804264972
 #define SIN_58 0.8480480961564
 #define COS_58 0.5299192642332
+#define DEG(angle) (angle * 180 / PI);
 
 GLfloat axis[3][3] = {{0, 1, 0},
                       {SIN_21, COS_21, 0},
@@ -62,6 +63,7 @@ int r[3][2] = {{0, 0}, {0, 0}, {0, 0}};
 short showAxis = FALSE;
 short game = 0;
 short lighting = TRUE;
+short skeleton = TRUE;
 
 #define NV 32
 #define PHI1 1.6180339887499
@@ -145,7 +147,11 @@ short faces[NF][4] = {{0, 20, 16, 22},
     
 float exludedVertex[4][3] = {0};
 float originalVertex[4][3] = {0};
-int exluded = 1;
+int exluded = TRUE;
+
+int myX = -1;
+int myY = -1;
+int myZ = -1;
 
 #define KEY_ESCAPE 27
 
@@ -238,26 +244,6 @@ void drawObject(float vertices[NV][3], int exclude) {
             }
         }
     }
-    
-//    //Vertexes
-//    glColor3f(1, 1, 0);
-//    glBegin(GL_POINTS);
-//        for (i = 0; i < NV; i++) {
-//            glVertex3fv(vertexes[i]);
-//        }
-//    glEnd();
-
-//    glColor3f(0, 1, 1);
-//    float normal[3];
-//    for (i=0; i < NF; i++) {
-//        glBegin(GL_LINES);
-//            for (j=0; j < 4; j++) {
-//                glVertex3fv(vertexes[faces[i][j]]);
-//            }
-//        glEnd();
-//        
-//    }
-
 
     int colors[NF] = {0};
     for (i=0; i < NF; i++) {
@@ -326,6 +312,148 @@ void drawExcluded() {
     
 }
 
+
+void drawCylinder(float radius, float height, int slices) {
+    float rad;
+    float next = PI * 2 / slices;
+    for (rad = 0; rad < PI * 2; rad += next) {
+        float z1 = sin(rad) * radius;
+        float z2 = sin(rad + next) * radius;
+        float x1 = cos(rad) * radius;
+        float x2 = cos(rad + next) * radius;
+        float y1 = -height / 2;
+        float y2 = height / 2;
+        float nz = sin(rad + (next / 2));
+        float nx = cos(rad + (next / 2));
+        glNormal3f(nx, 0, nz);
+        glBegin(GL_QUADS);
+            glVertex3f(x1, y1, z1);
+            glVertex3f(x2, y1, z2);
+            glVertex3f(x2, y2, z2);
+            glVertex3f(x1, y2, z1);
+        glEnd();
+    }
+}
+
+void rotateBy(float axis[3], float phi) {
+    GLfloat m[4][4];
+    float q[4] = {0};
+    axis_to_quat(axis, RAD(phi), q);
+    build_rotmatrix(m, q);
+    glMultMatrixf(&m[0][0]);
+}
+
+float getAngle(float v1[3], float v2[3]) {
+    float len1 = sqrt(v1[0]*v1[0] + v1[1]*v1[1] + v1[2]*v1[2]);
+    float len2 = sqrt(v1[0]*v1[0] + v1[1]*v1[1] + v1[2]*v1[2]);
+    float dotprd = (v1[0]*v2[0])+(v1[1]*v2[1])+(v1[2]*v2[2]);
+    return acos(dotprd/(len1*len2));
+}
+
+void drawSkeleton() {
+    int i, j, k;
+    for(i = 0; i < NV; i++) {
+        glPushMatrix();
+            glTranslatef(vertexes[i][0], vertexes[i][1], vertexes[i][2]);
+            glutSolidSphere(0.2, 32, 16);
+        glPopMatrix();
+    }
+    
+    float center[3];
+    float difference[3];
+    
+    float cylinder[3] = {0, 1, 0};
+    float zero[3] = {0, 0, 0};
+    for(i = 0; i < NV; i++) {
+        for (j = 0; j < 4; j++) {
+            int j2 = j < 3 ? j + 1 : 0;
+            float distance = 0;
+            for (k = 0; k < 3; k++) {
+                difference[k] = vertexes[faces[i][j]][k] - vertexes[faces[i][j2]][k];
+                distance += difference[k] * difference[k];
+                center[k] = (vertexes[faces[i][j]][k] + vertexes[faces[i][j2]][k]) / 2;
+            }
+            glPushMatrix();
+                glTranslatef(center[0], center[1], center[2]);
+//                glutSolidCube(0.3);
+
+//                glBegin(GL_LINE_LOOP);
+//                    glVertex3f(0.2,0.2,0.2);
+//                    glVertex3f(0,0,0);
+//                    glVertex3f(difference[0], difference[1], difference[2]);
+//                glEnd();
+//                
+                
+                
+                
+//                drawAxis();
+                
+                
+//                printf("[%d][%d] R: %f\t%f\t%f\t%f\t%f\t%f\n", i, j, f1, f2, f3, f4, f5, f6);
+                
+//[0][0] R: -31.717474    121.717476      0.000000        90.000000       180.000000      -90.000000
+//[0][1] R: 90.000000     0.000000        -90.000000      180.000000      -31.717474      121.717476
+//[0][2] R: 148.282532    -58.282524      180.000000      -90.000000      0.000000        90.000000
+//[0][3] R: -90.000000    180.000000      90.000000       0.000000        148.282532      -58.282528
+//[1][0] R: 90.000000     0.000000        -90.000000      180.000000      -31.717474      121.717476
+//[1][1] R: 180.000000    -90.000000      121.717476      -31.717474      90.000000       0.000000
+//[1][2] R: -90.000000    180.000000      90.000000       0.000000        148.282532      -58.282524
+//[1][3] R: 0.000000      90.000000       -58.282528      148.282532      -90.000000      180.000000
+
+//[0][0] R: 2.618034   - 1 .618034        0.000000
+//[0][1] R: 0.000000   2 . 618034        -1.618034
+//[0][2] R: -2.618034  1 . 618034        0.000000
+//[0][3] R: 0.000000   - 2 .618034        1.618034
+//[1][0] R: 0.000000   2 . 618034        -1.618034
+//[1][1] R: -1.618034  0 . 000000        2.618034
+//[1][2] R: 0.000000   - 2 .618034        1.618034
+//[1][3] R: 1.618034   0 . 000000        -2.618034
+       
+                
+//[0] Z=60=300
+//[1] X=-30=330               
+//[5] Y=60 Z=90 = 300                
+//                drawAxis();
+//                glRotatef(f1, 0, 0, 1);
+//                glRotatef(f5, 0, 0, 1);
+                
+//                glRotatef(myX, 1, 0, 0);
+//                glRotatef(myY, 0, 1, 0);
+//                glRotatef(myZ, 0, 0, 1);
+//                glRotatef(f2, 0, 0, 1);
+//                glRotatef(rz, 0, 0, 1);
+                
+                /* Normalizing */
+                difference[0] /= sqrt(distance);
+                difference[1] /= sqrt(distance);
+                difference[2] /= sqrt(distance);
+                
+                float nx, ny, nz;
+                float normal[3];
+                CalculateVectorNormal(zero, cylinder, difference,
+                                      &nx, &ny, &nz);
+                normal[0] = nx;
+                normal[1] = ny;
+                normal[2] = nz;
+                
+//                glBegin(GL_LINES);
+//                    glVertex3fv(zero);
+//                    glVertex3f(nx, ny, nz);
+//                glEnd();
+//                    
+                
+//                float rx = DEG(atan( difference[1] / difference[2] ))-90;
+                
+                float angle = DEG(getAngle(cylinder, difference));
+                rotateBy(normal, angle);
+//                printf("Rot %f (%f %f %f) | (%f %f %f)\n", angle, normal[0], normal[1], normal[2], difference[0], difference[1], difference[2]);
+                drawCylinder(0.05, sqrt(distance), 64);
+                
+
+            glPopMatrix();
+        }
+    }
+}
 
 
 /*
@@ -445,7 +573,7 @@ void initLight() {
     glEnableClientState(GL_NORMAL_ARRAY);
     
     glEnable(GL_LIGHTING);
-    glShadeModel (GL_SMOOTH);
+    glShadeModel(GL_SMOOTH);
     glEnable(GL_DEPTH_TEST);
 }
 
@@ -515,6 +643,9 @@ void onKeyPress(unsigned char key, int keyX, int keyY) {
                 glDisable(GL_LIGHTING);
             }
         break;
+        case '4':
+            skeleton = skeleton == 0?1:0;
+        break;
         case 'q':
             r[0][1] = r[0][1] - angles[0];
         break;
@@ -536,27 +667,50 @@ void onKeyPress(unsigned char key, int keyX, int keyY) {
         case KEY_ESCAPE:
             exit(0);
         break;
+        case 'e':
+            myX-=1;
+        break;
+        case 'r':
+            myX+=1;
+        break;
+        case 'd':
+            myY-=1;
+        break;
+        case 'f':
+            myY+=1;
+        break;
+        case 'c':
+            myZ-=1;
+        break;
+        case 'v':
+            myZ+=1;
+        break;
     }
+    printf("myR = %d %d %d\n", myX, myY, myZ);
     glutPostRedisplay();
 }
 
 void mouse(int button, int state, int x, int y) {
-  if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-    spinning = 0;
-    glutIdleFunc(NULL);
-    moving = 1;
-    beginx = x;
-    beginy = y;
-    if (glutGetModifiers() & GLUT_ACTIVE_SHIFT) {
-      scaling = 1;
+    if (state == GLUT_DOWN) {
+        spinning = 0;
+        glutIdleFunc(NULL);
+        moving = 1;
+        beginx = x;
+        beginy = y;
+        if (glutGetModifiers() & GLUT_ACTIVE_SHIFT && state == GLUT_DOWN) {
+            scaling = 1;
+        }
+    } else if (button == 4) {
+        scalefactor *= 0.9;
+    } else if (button == 3) {
+        scalefactor *= 1.1;
     } else {
-      scaling = 0;
+        scaling = 0;
     }
-  }
-  if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
-    moving = 0;
-    newModel = 0;
-  }
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
+        moving = 0;
+        newModel = 0;
+    }
 }
 
 void motion(int x, int y) {
@@ -596,8 +750,11 @@ void redraw() {
         drawExcluded();
     } else {
         drawObject(vertexes, -1);
-    }        
+    }
 
+    if (skeleton) {
+        drawSkeleton();
+    }
       
   glutSwapBuffers();
 }

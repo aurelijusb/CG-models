@@ -29,3 +29,5 @@ References
  * http://www.rwgrayprojects.com/rbfnotes/polyhed/PolyhedraData/RhombicTriaconta/RhombicTriaconta.pdf
  * http://scv.bu.edu/documentation/software-help/graphics-programming/opengl_examples/materials/
  * http://support.microsoft.com/kb/131130
+ * http://www.vbforums.com/showthread.php?584390-Quaternion-from-two-3D-Position-Vectors
+ * http://www.opengl.org/discussion_boards/showthread.php/152034-Angle-between-two-vectors
