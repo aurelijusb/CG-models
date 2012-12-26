@@ -30,6 +30,7 @@
 //#include <math.h>       /* for cos(), sin(), and sqrt() */
 //#include <GL/glut.h>
 #include "trackball.h"
+#include "normals.h"
 
 #define PI 3.141592653589793
 #define RAD(ange) (ange * PI / 180.0)
@@ -58,8 +59,9 @@ int newModel = 1;
 int scaling;
 float scalefactor = 1.0;
 int r[3][2] = {{0, 0}, {0, 0}, {0, 0}};
-short showAxis = TRUE;
+short showAxis = FALSE;
 short game = 0;
+short lighting = TRUE;
 
 #define NV 32
 #define PHI1 1.6180339887499
@@ -145,6 +147,8 @@ float exludedVertex[4][3] = {0};
 float originalVertex[4][3] = {0};
 int exluded = 1;
 
+#define KEY_ESCAPE 27
+
 /*
  * Models
  */
@@ -177,21 +181,18 @@ void drawAxis() {
     glPopMatrix();
 }
 
-void drawRotationAxis() {
-    float colors[3][3] = {{0.5, 0, 0},
-                          {0, 0.5, 0},
-                          {0, 0, 0.5}
-                         };
-    const int n = 3;
-    int i;
-    int radius = 10;
-    for (i = 0; i < n; i++) {
-        glColor3f(colors[i][0], colors[i][1], colors[i][2]);
-        glBegin(GL_LINE_LOOP);
-            glVertex3f(0, 0, 0);
-            glVertex3f(axis[i][0] * radius, axis[i][1] * radius, axis[i][2] * radius);
-        glEnd();
+void normals(int face) {
+    int i, j;
+    float normal[3];
+    for (i=0; i < 4; i++) {
+        for(j=0; j < 3; j++) {
+            normal[j] += vertexes[faces[face][i]][j];
+        }
     }
+    for(j=0; j < 3; j++) {
+        normal[j] /= 4;
+    }
+    glNormal3fv(normal);
 }
 
 void drawObject(float vertices[NV][3], int exclude) {
@@ -238,26 +239,25 @@ void drawObject(float vertices[NV][3], int exclude) {
         }
     }
     
-#define GL_VERTER_ARRAY(array) glVertex3f(array[0], array[1], array[2]) 
-#define GL_COLORS_ARRAY(array) glColor3f(array[0], array[1], array[2]) 
-    
-    //Vertexes
-    glColor3f(1, 1, 0);
-    glBegin(GL_POINTS);
-        for (i = 0; i < NV; i++) {
-            GL_VERTER_ARRAY(vertexes[i]);
-        }
-    glEnd();
-    
-    glColor3f(0, 1, 1);
-    for (i=0; i < NF; i++) {
-        glBegin(GL_LINES);
-            for (j=0; j < 4; j++) {
-                GL_VERTER_ARRAY(vertexes[faces[i][j]]);
-            }
-        glEnd();
-    }
-    
+//    //Vertexes
+//    glColor3f(1, 1, 0);
+//    glBegin(GL_POINTS);
+//        for (i = 0; i < NV; i++) {
+//            glVertex3fv(vertexes[i]);
+//        }
+//    glEnd();
+
+//    glColor3f(0, 1, 1);
+//    float normal[3];
+//    for (i=0; i < NF; i++) {
+//        glBegin(GL_LINES);
+//            for (j=0; j < 4; j++) {
+//                glVertex3fv(vertexes[faces[i][j]]);
+//            }
+//        glEnd();
+//        
+//    }
+
 
     int colors[NF] = {0};
     for (i=0; i < NF; i++) {
@@ -278,38 +278,52 @@ void drawObject(float vertices[NV][3], int exclude) {
             if (!inUse) {
                 colors[i] = j;
                 found = TRUE;
-            } else {
             }
         }
     }
     
+    glEnable(GL_NORMALIZE);
+    GLfloat fNormalX, fNormalY, fNormalZ;
     for (i=0; i < NF; i++) {
         if (i != exclude) {
-            GL_COLORS_ARRAY(available_colors[colors[i]]);
+            CalculateVectorNormal(vertexes[faces[i][0]], vertexes[faces[i][1]],
+                     vertexes[faces[i][2]], &fNormalX, &fNormalY,
+                     &fNormalZ);
+            glNormal3f(-fNormalX, -fNormalY, -fNormalZ);
+            glColor3fv(available_colors[colors[i]]);
             glBegin(GL_POLYGON);
                 for (j=0; j<4; j++) {
-                    GL_VERTER_ARRAY(vertexes[faces[i][j]]);
+                    glVertex3fv(vertexes[faces[i][j]]);
                 }
             glEnd();
         }
     }
+    glDisable(GL_NORMALIZE);
 }
 
 void drawExcluded() {
-    GL_COLORS_ARRAY(available_colors[NC-1]);
+    glColor3fv(available_colors[NC-1]);
+    GLfloat fNormalX, fNormalY, fNormalZ;
+    CalculateVectorNormal(exludedVertex[1], exludedVertex[2],
+                         exludedVertex[3], &fNormalX, &fNormalY,
+                         &fNormalZ);
+    
+    glNormal3f(-fNormalX, -fNormalY, -fNormalZ);
+    glEnable(GL_NORMALIZE);
     glBegin(GL_POLYGON);
         int i;
         for (i=0; i<4; i++) {
-            GL_VERTER_ARRAY(exludedVertex[i]);
+            glVertex3fv(exludedVertex[i]);
+        }
+    glEnd();
+    glDisable(GL_NORMALIZE);
+    
+    glBegin(GL_LINE_LOOP);
+        for (i=0; i<4; i++) {
+            glVertex3fv(originalVertex[i]);
         }
     glEnd();
     
-    GL_COLORS_ARRAY(available_colors[NC-1]);
-    glBegin(GL_LINE_LOOP);
-        for (i=0; i<4; i++) {
-            GL_VERTER_ARRAY(originalVertex[i]);
-        }
-    glEnd();
 }
 
 
@@ -331,7 +345,20 @@ void recalcModelView() {
     glEnable(GL_NORMALIZE);
   }
   glScalef(scalefactor, scalefactor, scalefactor);
-  newModel = 0;
+}
+
+void resetModelView() {
+  GLfloat m[4][4];
+  glPopMatrix();
+  glPushMatrix();
+  build_rotmatrix(m, empty);
+  glMultMatrixf(&m[0][0]);
+  if (scalefactor == 1.0) {
+    glDisable(GL_NORMALIZE);
+  } else {
+    glEnable(GL_NORMALIZE);
+  }
+  glScalef(scalefactor, scalefactor, scalefactor);
 }
 
 void multiply(float m[4][4], float c[3], float r[3]) {
@@ -350,7 +377,7 @@ void multiply(float m[4][4], float c[3], float r[3]) {
     }
 }
 
-void drawRotationAxis2() {
+void drawRotationAxis() {
     float colors[3][3] = {{0.5, 0.3, 0.3},
                           {0.3, 0.5, 0.3},
                           {0.3, 0.3, 0.5}
@@ -363,7 +390,6 @@ void drawRotationAxis2() {
         glBegin(GL_LINE_LOOP);
             glVertex3f(0, 0, 0);
             glVertex3f(axis[i][0] * radius, axis[i][1] * radius, axis[i][2] * radius);
-            glVertex3f(axis[i][0] * radius+0.2, axis[i][1] * radius+0.2, axis[i][2] * radius+0.2);
         glEnd();
     }
 }
@@ -390,6 +416,37 @@ void rotate(int by, float axis[3][3], int phi) {
     for (i=0; i<4; i++) {
         multiply(m, originalVertex[i], originalVertex[i]);
     }
+}
+
+/*
+ * Lighting
+ */
+
+void initLight() {
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat mat_shininess[] = { 50.0 };
+    GLfloat light0_position[] = { 1.0, 1.0, 1.0, 0.0 };
+    glMaterialfv(GL_LIGHT0, GL_SPECULAR, mat_specular);
+    glMaterialfv(GL_LIGHT0, GL_SHININESS, mat_shininess);
+    glLightfv(GL_LIGHT0, GL_POSITION, light0_position);
+    glEnable(GL_LIGHT0);
+
+    GLfloat light1_ambient[] = { 0.4, 0.4, 0.4, 1.0 };
+    GLfloat light1_diffuse[] = { 0.4, 0.6, 0.8, 1.0 };
+    GLfloat light1_specular[] = { 0.6, 0.8, 1.0, 1.0 };
+    GLfloat light1_position[] = { -1.0, 1.0, 1.0, 0.0 };
+
+    glLightfv(GL_LIGHT1, GL_AMBIENT, light1_ambient);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, light1_diffuse);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, light1_specular);
+    glLightfv(GL_LIGHT1, GL_POSITION, light1_position);
+    glEnable(GL_LIGHT1);
+    
+    glEnableClientState(GL_NORMAL_ARRAY);
+    
+    glEnable(GL_LIGHTING);
+    glShadeModel (GL_SMOOTH);
+    glEnable(GL_DEPTH_TEST);
 }
 
 /*
@@ -421,10 +478,11 @@ void initGame() {
         }
     }
     
+    printf("Randomized\n");
     for (i=0; i<2; i++) {
         j = rand() % 3;
         rotate(j, axis, angles[j]);
-        printf("Randomized: Axis %d by %d degrees\n", j, angles[j]);
+        printf("\tAxis %d by %d degrees\n", j, angles[j]);
     }
 }
 
@@ -448,6 +506,15 @@ void onKeyPress(unsigned char key, int keyX, int keyY) {
                 initGame();
             }
         break;
+        case '3':
+            lighting = lighting == 0?1:0;
+            printf("Lighting: %d\n", lighting);
+            if (lighting) {
+                glEnable(GL_LIGHTING);
+            } else {
+                glDisable(GL_LIGHTING);
+            }
+        break;
         case 'q':
             r[0][1] = r[0][1] - angles[0];
         break;
@@ -465,6 +532,9 @@ void onKeyPress(unsigned char key, int keyX, int keyY) {
         break;
         case 'x':
             r[2][1] += angles[2];
+        break;
+        case KEY_ESCAPE:
+            exit(0);
         break;
     }
     glutPostRedisplay();
@@ -515,14 +585,10 @@ void motion(int x, int y) {
 
 void redraw() {
     GLfloat m[4][4];
-    if (newModel) {
-        recalcModelView();
-    }
+    recalcModelView();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    int i;
-    
     if (showAxis) {
-        drawRotationAxis2();
+        drawRotationAxis();
     }
     
     if (game) {
@@ -530,15 +596,9 @@ void redraw() {
         drawExcluded();
     } else {
         drawObject(vertexes, -1);
-    }
-    
-    
-    glPopMatrix();
-    glPushMatrix();
-    
-    build_rotmatrix(m, curquat);
-    glMultMatrixf(&m[0][0]);
-    
+    }        
+
+      
   glutSwapBuffers();
 }
 
@@ -622,6 +682,15 @@ int main(int argc, char **argv) {
     0.0, 0.0, 0.0,      /* center is at (0,0,0) */
     0.0, 1.0, 0.);      /* up is in positive Y direction */
   glPushMatrix();       /* dummy push so we can pop on model recalc */
+  
+  //FIXME: debug info
+  if (game) {
+      initGame();
+  }
+  if (lighting) {
+      initLight();
+  }
+  
   glutMainLoop();
   
   

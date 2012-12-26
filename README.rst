@@ -10,9 +10,7 @@ Libraries
 
 To compile program::
 
-    gcc src/main.c -lGL -lGLU -lglut -lm -o U3Aurelijus
-    g++ grafika2.cpp -lGL -lGLU -lglut -lm -o U3T
-
+    gcc src/* -lGL -lGLU -lglut -lm -o U4Aurelijus
 
 User interface
 --------------
@@ -30,3 +28,4 @@ References
  * https://svn.blender.org/svnroot/bf-extensions/trunk/py/scripts/addons/add_mesh_solid.py
  * http://www.rwgrayprojects.com/rbfnotes/polyhed/PolyhedraData/RhombicTriaconta/RhombicTriaconta.pdf
  * http://scv.bu.edu/documentation/software-help/graphics-programming/opengl_examples/materials/
+ * http://support.microsoft.com/kb/131130
