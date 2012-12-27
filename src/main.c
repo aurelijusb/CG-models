@@ -64,6 +64,7 @@ short showAxis = FALSE;
 short game = 0;
 short lighting = TRUE;
 short skeleton = TRUE;
+short materials = TRUE;
 
 #define NV 32
 #define PHI1 1.6180339887499
@@ -144,6 +145,10 @@ short faces[NF][4] = {{0, 20, 16, 22},
                                     {1, 0, 1},
                                     {1, 1, 1}};
 
+float mat_red[4] = {0.5, 0.1, 0.1, 0.5};
+float mat_green[4] = {0.1, 0.5, 0.1, 0.5};
+float mat_blue[4] = {0.1, 0.1, 0.5, 0.5};
+float mat_gray[4] = {0.5, 0.5, 0.5, 0.5};
     
 float exludedVertex[4][3] = {0};
 float originalVertex[4][3] = {0};
@@ -268,6 +273,10 @@ void drawObject(float vertices[NV][3], int exclude) {
         }
     }
     
+    if (materials) {
+        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_gray);
+    }
+    
     glEnable(GL_NORMALIZE);
     GLfloat fNormalX, fNormalY, fNormalZ;
     for (i=0; i < NF; i++) {
@@ -288,6 +297,10 @@ void drawObject(float vertices[NV][3], int exclude) {
 }
 
 void drawExcluded() {
+    if (materials) {
+        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_red);
+    }
+    
     glColor3fv(available_colors[NC-1]);
     GLfloat fNormalX, fNormalY, fNormalZ;
     CalculateVectorNormal(exludedVertex[1], exludedVertex[2],
@@ -303,6 +316,10 @@ void drawExcluded() {
         }
     glEnd();
     glDisable(GL_NORMALIZE);
+    
+    if (materials) {
+        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_green);
+    }
     
     glBegin(GL_LINE_LOOP);
         for (i=0; i<4; i++) {
@@ -351,6 +368,10 @@ float getAngle(float v1[3], float v2[3]) {
 }
 
 void drawSkeleton() {
+    if (materials) {
+        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_red);
+    }
+
     int i, j, k;
     for(i = 0; i < NV; i++) {
         glPushMatrix();
@@ -361,6 +382,10 @@ void drawSkeleton() {
     
     float center[3];
     float difference[3];
+    
+    if (materials) {
+        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_green);
+    }
     
     float cylinder[3] = {0, 1, 0};
     float zero[3] = {0, 0, 0};
@@ -373,56 +398,10 @@ void drawSkeleton() {
                 distance += difference[k] * difference[k];
                 center[k] = (vertexes[faces[i][j]][k] + vertexes[faces[i][j2]][k]) / 2;
             }
+            
             glPushMatrix();
                 glTranslatef(center[0], center[1], center[2]);
-//                glutSolidCube(0.3);
 
-//                glBegin(GL_LINE_LOOP);
-//                    glVertex3f(0.2,0.2,0.2);
-//                    glVertex3f(0,0,0);
-//                    glVertex3f(difference[0], difference[1], difference[2]);
-//                glEnd();
-//                
-                
-                
-                
-//                drawAxis();
-                
-                
-//                printf("[%d][%d] R: %f\t%f\t%f\t%f\t%f\t%f\n", i, j, f1, f2, f3, f4, f5, f6);
-                
-//[0][0] R: -31.717474    121.717476      0.000000        90.000000       180.000000      -90.000000
-//[0][1] R: 90.000000     0.000000        -90.000000      180.000000      -31.717474      121.717476
-//[0][2] R: 148.282532    -58.282524      180.000000      -90.000000      0.000000        90.000000
-//[0][3] R: -90.000000    180.000000      90.000000       0.000000        148.282532      -58.282528
-//[1][0] R: 90.000000     0.000000        -90.000000      180.000000      -31.717474      121.717476
-//[1][1] R: 180.000000    -90.000000      121.717476      -31.717474      90.000000       0.000000
-//[1][2] R: -90.000000    180.000000      90.000000       0.000000        148.282532      -58.282524
-//[1][3] R: 0.000000      90.000000       -58.282528      148.282532      -90.000000      180.000000
-
-//[0][0] R: 2.618034   - 1 .618034        0.000000
-//[0][1] R: 0.000000   2 . 618034        -1.618034
-//[0][2] R: -2.618034  1 . 618034        0.000000
-//[0][3] R: 0.000000   - 2 .618034        1.618034
-//[1][0] R: 0.000000   2 . 618034        -1.618034
-//[1][1] R: -1.618034  0 . 000000        2.618034
-//[1][2] R: 0.000000   - 2 .618034        1.618034
-//[1][3] R: 1.618034   0 . 000000        -2.618034
-       
-                
-//[0] Z=60=300
-//[1] X=-30=330               
-//[5] Y=60 Z=90 = 300                
-//                drawAxis();
-//                glRotatef(f1, 0, 0, 1);
-//                glRotatef(f5, 0, 0, 1);
-                
-//                glRotatef(myX, 1, 0, 0);
-//                glRotatef(myY, 0, 1, 0);
-//                glRotatef(myZ, 0, 0, 1);
-//                glRotatef(f2, 0, 0, 1);
-//                glRotatef(rz, 0, 0, 1);
-                
                 /* Normalizing */
                 difference[0] /= sqrt(distance);
                 difference[1] /= sqrt(distance);
@@ -436,22 +415,15 @@ void drawSkeleton() {
                 normal[1] = ny;
                 normal[2] = nz;
                 
-//                glBegin(GL_LINES);
-//                    glVertex3fv(zero);
-//                    glVertex3f(nx, ny, nz);
-//                glEnd();
-//                    
-                
-//                float rx = DEG(atan( difference[1] / difference[2] ))-90;
-                
                 float angle = DEG(getAngle(cylinder, difference));
                 rotateBy(normal, angle);
-//                printf("Rot %f (%f %f %f) | (%f %f %f)\n", angle, normal[0], normal[1], normal[2], difference[0], difference[1], difference[2]);
                 drawCylinder(0.05, sqrt(distance), 64);
-                
-
             glPopMatrix();
         }
+    }
+    
+    if (materials) {
+        glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_gray);
     }
 }
 
@@ -505,15 +477,32 @@ void multiply(float m[4][4], float c[3], float r[3]) {
     }
 }
 
+float *getMaterial(int i) {
+    switch(i) {
+        case 0:
+            return mat_red;
+        case 1:
+            return mat_green;
+        case 2:
+            return mat_blue;
+        default:
+            return mat_gray;
+    }
+}
+
 void drawRotationAxis() {
     float colors[3][3] = {{0.5, 0.3, 0.3},
                           {0.3, 0.5, 0.3},
                           {0.3, 0.3, 0.5}
                          };
+    
     const int n = 3;
     int i;
     int radius = 10;
     for (i = 0; i < n; i++) {
+        if (materials) {
+            glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, getMaterial(i));
+        }
         glColor3f(colors[i][0], colors[i][1], colors[i][2]);
         glBegin(GL_LINE_LOOP);
             glVertex3f(0, 0, 0);
@@ -646,6 +635,9 @@ void onKeyPress(unsigned char key, int keyX, int keyY) {
         case '4':
             skeleton = skeleton == 0?1:0;
         break;
+        case '5':
+            materials = materials == 0?1:0;
+        break;
         case 'q':
             r[0][1] = r[0][1] - angles[0];
         break;
@@ -686,7 +678,6 @@ void onKeyPress(unsigned char key, int keyX, int keyY) {
             myZ+=1;
         break;
     }
-    printf("myR = %d %d %d\n", myX, myY, myZ);
     glutPostRedisplay();
 }
 
