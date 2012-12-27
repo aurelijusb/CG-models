@@ -31,6 +31,7 @@
 //#include <GL/glut.h>
 #include "trackball.h"
 #include "normals.h"
+#include "main.h"
 
 #define PI 3.141592653589793
 #define RAD(angle) (angle * PI / 180.0)
@@ -158,7 +159,17 @@ int myX = -1;
 int myY = -1;
 int myZ = -1;
 
+char *sourceFile = "bezdzione.obj";
+
 #define KEY_ESCAPE 27
+
+/*
+ * Loading external models
+ */
+
+void loadModel(char *file) {
+    
+}
 
 /*
  * Models
@@ -540,18 +551,18 @@ void rotate(int by, float axis[3][3], int phi) {
  */
 
 void initLight() {
-    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat mat_shininess[] = { 50.0 };
-    GLfloat light0_position[] = { 1.0, 1.0, 1.0, 0.0 };
-    glMaterialfv(GL_LIGHT0, GL_SPECULAR, mat_specular);
-    glMaterialfv(GL_LIGHT0, GL_SHININESS, mat_shininess);
+    GLfloat light0_specular[] = { 1.0, 0.8, 0.8, 1.0 };
+    GLfloat light0_shininess[] = { 50.0 };
+    GLfloat light0_position[] = { 10.0, 10.0, 10.0, 0.0 };
+    glMaterialfv(GL_LIGHT0, GL_SPECULAR, light0_specular);
+    glMaterialfv(GL_LIGHT0, GL_SHININESS, light0_shininess);
     glLightfv(GL_LIGHT0, GL_POSITION, light0_position);
     glEnable(GL_LIGHT0);
 
-    GLfloat light1_ambient[] = { 0.4, 0.4, 0.4, 1.0 };
-    GLfloat light1_diffuse[] = { 0.4, 0.6, 0.8, 1.0 };
+    GLfloat light1_ambient[] = { 0.4, 0.4, 0.6, 1.0 };
+    GLfloat light1_diffuse[] = { 0.0, 0.0, 1, 1.0 };
     GLfloat light1_specular[] = { 0.6, 0.8, 1.0, 1.0 };
-    GLfloat light1_position[] = { -1.0, 1.0, 1.0, 0.0 };
+    GLfloat light1_position[] = { -1.0, 0.0, 0.0, 0.0 };
 
     glLightfv(GL_LIGHT1, GL_AMBIENT, light1_ambient);
     glLightfv(GL_LIGHT1, GL_DIFFUSE, light1_diffuse);
@@ -806,7 +817,7 @@ void myReshape(int w, int h) {
   H = h;
 }
 
-int main(int argc, char **argv) {
+int main2(int argc, char **argv) {
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH | GLUT_MULTISAMPLE);
   trackball(curquat, 0.0, 0.0, 0.0, 0.0);
