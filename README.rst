@@ -28,14 +28,14 @@ User interface
 --------------
 
 To view object, drag with mouse. Keyboard controllers
-[1] to turn on/off axis
-[2] to turn on/off game mode
-[3] to turn on/off lightning
-[4] to turn on/off skeleton (cilinders on edges, and spheres on vertexes)
-[5] to turn on/off materials
-[6] to turn on/off smooth shading
-[7] to turn on/off loading external (.obj .mtl) object
-[Q][W], [A][S], [Z][X] to rotate around red, gree and blue axes.
+ [1] to turn on/off axis
+ [2] to turn on/off game mode
+ [3] to turn on/off lightning
+ [4] to turn on/off skeleton (cilinders on edges, and spheres on vertexes)
+ [5] to turn on/off materials
+ [6] to turn on/off smooth shading
+ [7] to turn on/off loading external (.obj .mtl) object
+ [Q][W], [A][S], [Z][X] to rotate around red, gree and blue axes.
 
   
 References
