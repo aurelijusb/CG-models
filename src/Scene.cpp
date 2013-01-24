@@ -51,6 +51,7 @@ short lighting = TRUE;
 short skeleton = TRUE;
 short materialsMode = TRUE;
 short modelsMode = FALSE;
+short smoofShading = FALSE;
 
 #define NV 32
 #define PHI1 1.6180339887499
@@ -293,10 +294,16 @@ void drawObject(float vertices[NV][3], int exclude) {
             CalculateVectorNormal(vertexes[faces[i][0]], vertexes[faces[i][1]],
                      vertexes[faces[i][2]], &fNormalX, &fNormalY,
                      &fNormalZ);
-            glNormal3f(-fNormalX, -fNormalY, -fNormalZ);
+            
+            if (!smoofShading) {
+                glNormal3f(-fNormalX, -fNormalY, -fNormalZ);
+            }
             glColor3fv(available_colors[colors[i]]);
             glBegin(GL_POLYGON);
                 for (j=0; j<4; j++) {
+                    if (smoofShading) {
+                        glNormal3f(vertexes[faces[i][j]][0], vertexes[faces[i][j]][1], vertexes[faces[i][j]][2]);
+                    }
                     glVertex3fv(vertexes[faces[i][j]]);
                 }
             glEnd();
@@ -582,15 +589,17 @@ void drawSkeleton() {
 
 void initLight() {
     GLfloat light0_specular[] = { 1.0, 0.8, 0.8, 1.0 };
+    GLfloat light0_difusion[] = { 1.0, 0.6, 0.6, 1.0 };
     GLfloat light0_shininess[] = { 50.0 };
     GLfloat light0_position[] = { 10.0, 10.0, 10.0, 0.0 };
-    glMaterialfv(GL_LIGHT0, GL_SPECULAR, light0_specular);
-    glMaterialfv(GL_LIGHT0, GL_SHININESS, light0_shininess);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, light0_specular);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light0_difusion);
+    glLightfv(GL_LIGHT0, GL_SHININESS, light0_shininess);
     glLightfv(GL_LIGHT0, GL_POSITION, light0_position);
     glEnable(GL_LIGHT0);
 
-    GLfloat light1_ambient[] = { 0.4, 0.4, 0.6, 1.0 };
-    GLfloat light1_diffuse[] = { 0.0, 0.0, 1, 1.0 };
+    GLfloat light1_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
+    GLfloat light1_diffuse[] = { 0.6, 0.8, 1.0, 1.0 };
     GLfloat light1_specular[] = { 0.6, 0.8, 1.0, 1.0 };
     GLfloat light1_position[] = { -1.0, 0.0, 0.0, 0.0 };
 
@@ -603,7 +612,6 @@ void initLight() {
     glEnableClientState(GL_NORMAL_ARRAY);
     
     glEnable(GL_LIGHTING);
-    glShadeModel(GL_SMOOTH);
     glEnable(GL_DEPTH_TEST);
 }
 
@@ -729,6 +737,14 @@ void Scene::onKeyPress(unsigned char key, int keyX, int keyY) {
             materialsMode = materialsMode == 0?1:0;
         break;
         case '6':
+            smoofShading = smoofShading == 0?1:0;
+            if (smoofShading) {
+                glShadeModel(GL_SMOOTH);
+            } else {
+                glShadeModel(GL_FLAT);
+            }
+        break;
+        case '7':
             modelsMode = modelsMode == 0?1:0;
         break;
         case 'q':
@@ -771,7 +787,6 @@ void Scene::onKeyPress(unsigned char key, int keyX, int keyY) {
             myZ+=1;
         break;
     }
-    printf("myR = %d %d %d\n", myX, myY, myZ);
     glutPostRedisplay();
 }
 
