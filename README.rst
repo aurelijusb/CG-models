@@ -27,7 +27,8 @@ To compile program::
 User interface
 --------------
 
-To view object, drag with mouse. Keyboard controllers
+To view object, drag with mouse. Keyboard controllers::
+
  [1] to turn on/off axis
  [2] to turn on/off game mode
  [3] to turn on/off lightning
