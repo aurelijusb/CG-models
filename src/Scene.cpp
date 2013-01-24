@@ -9,21 +9,13 @@
 #include <stdio.h>
 #include <string.h>
 
-//
-//#define KEY_ESCAPE 27
-//#define KEY_ENTER 13
-//
 #define FALSE 0
 #define TRUE 1
 
 #include <stdio.h>
 #include <stdlib.h>
-//#include <string.h>
-//#include <math.h>       /* for cos(), sin(), and sqrt() */
-//#include <GL/glut.h>
 #include "trackball.h"
 #include "normals.h"
-#include "main.h"
 
 #define PI 3.141592653589793
 #define RAD(angle) (angle * PI / 180.0)
@@ -156,7 +148,7 @@ int myZ = -1;
 #define KEY_ESCAPE 27
 
 /*
- * Models
+ * Axis
  */
 
 void drawLineY() {
@@ -187,6 +179,11 @@ void drawAxis() {
     glPopMatrix();
 }
 
+
+/*
+ * Materials
+ */
+
 void normals(int face) {
     int i, j;
     float normal[3];
@@ -200,6 +197,23 @@ void normals(int face) {
     }
     glNormal3fv(normal);
 }
+
+float *getMaterial(int i) {
+    switch(i) {
+        case 0:
+            return mat_red;
+        case 1:
+            return mat_green;
+        case 2:
+            return mat_blue;
+        default:
+            return mat_gray;
+    }
+}
+
+/*
+ * Rombic tricaedron
+ */
 
 void drawObject(float vertices[NV][3], int exclude) {
     int i, j, k, l, m;
@@ -322,6 +336,162 @@ void drawExcluded() {
     
 }
 
+/*
+ * Matrixes and quarterions
+ */
+
+void recalcModelView() {
+  GLfloat m[4][4];
+
+  glPopMatrix();
+  glPushMatrix();
+  build_rotmatrix(m, curquat);
+  glMultMatrixf(&m[0][0]);
+  if (scalefactor == 1.0) {
+    glDisable(GL_NORMALIZE);
+  } else {
+    glEnable(GL_NORMALIZE);
+  }
+  glScalef(scalefactor, scalefactor, scalefactor);
+}
+
+void resetModelView() {
+  GLfloat m[4][4];
+  glPopMatrix();
+  glPushMatrix();
+  build_rotmatrix(m, empty);
+  glMultMatrixf(&m[0][0]);
+  if (scalefactor == 1.0) {
+    glDisable(GL_NORMALIZE);
+  } else {
+    glEnable(GL_NORMALIZE);
+  }
+  glScalef(scalefactor, scalefactor, scalefactor);
+}
+
+void multiply(float m[4][4], float c[3], float r[3]) {
+    float c2[4] = {c[0], c[1], c[2], 1};
+    float r2[4] = {0};
+    
+    int x, y;
+    for (x=0; x<4; x++) {
+        for (y=0; y<4; y++) {
+            r2[y] += m[y][x]*c2[x];
+        }        
+    }
+    
+    for (y=0; y<3; y++) {
+        r[y] = r2[y] / r2[3];
+    }
+}
+
+
+/*
+ * Rotation and game
+ */
+
+void rotateBy(float axis[3], float phi) {
+    GLfloat m[4][4];
+    float q[4] = {0};
+    axis_to_quat(axis, RAD(phi), q);
+    build_rotmatrix(m, q);
+    glMultMatrixf(&m[0][0]);
+}
+
+float getAngle(float v1[3], float v2[3]) {
+    float len1 = sqrt(v1[0]*v1[0] + v1[1]*v1[1] + v1[2]*v1[2]);
+    float len2 = sqrt(v1[0]*v1[0] + v1[1]*v1[1] + v1[2]*v1[2]);
+    float dotprd = (v1[0]*v2[0])+(v1[1]*v2[1])+(v1[2]*v2[2]);
+    return acos(dotprd/(len1*len2));
+}
+
+void drawRotationAxis() {
+    float colors[3][3] = {{0.5, 0.3, 0.3},
+                          {0.3, 0.5, 0.3},
+                          {0.3, 0.3, 0.5}
+                         };
+    const int n = 3;
+    int i;
+    int radius = 10;
+    for (i = 0; i < n; i++) {
+        if (materialsMode) {
+            glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, getMaterial(i));
+        }
+        glColor3f(colors[i][0], colors[i][1], colors[i][2]);
+        glBegin(GL_LINE_LOOP);
+            glVertex3f(0, 0, 0);
+            glVertex3f(axis[i][0] * radius, axis[i][1] * radius, axis[i][2] * radius);
+        glEnd();
+    }
+}
+
+void rotate(int by, float axis[3][3], int phi) {
+    GLfloat m[4][4];
+    float q[4] = {0};
+    int i;
+    for (i=0; i<4; i++) {
+        q[i] = 0;
+    }
+    axis_to_quat(axis[by],RAD(phi), q);
+    build_rotmatrix(m, q);
+    
+    for (i=0; i<3; i++) {
+        if (i != by) {
+            multiply(m, axis[i], axis[i]);
+        }
+    }
+    
+    for (i=0; i<NV; i++) {
+        multiply(m, vertexes[i], vertexes[i]);
+    }
+    for (i=0; i<4; i++) {
+        multiply(m, originalVertex[i], originalVertex[i]);
+    }
+}
+
+void initGame() {
+    int i, j;
+    float x = 0;
+    float y = 0;
+    float z = 0;
+    for (i=0; i<4; i++) {
+        for (j=0; j<3; j++) {
+            exludedVertex[i][j] = vertexes[faces[exluded][i]][j];
+        }
+        x += exludedVertex[i][0];
+        y += exludedVertex[i][1];
+        z += exludedVertex[i][2];
+    }
+    x /= 3;
+    y /= 3;
+    z /= 3;
+    for (i=0; i<4; i++) {
+        exludedVertex[i][0] += x / 6;
+        exludedVertex[i][1] += y / 6;
+        exludedVertex[i][2] += z / 6;
+        for (j=0; j < 3; j++) {
+            originalVertex[i][j] = exludedVertex[i][j];
+        }
+    }
+    
+    printf("Randomized\n");
+    for (i=0; i<2; i++) {
+        j = rand() % 3;
+        rotate(j, axis, angles[j]);
+        printf("\tAxis %d by %d degrees\n", j, angles[j]);
+    }
+}
+
+void finishGame() {
+    game = FALSE;
+}
+
+
+
+
+/*
+ * Skeleton
+ */
 
 void drawCylinder(float radius, float height, int slices) {
     float rad;
@@ -343,21 +513,6 @@ void drawCylinder(float radius, float height, int slices) {
             glVertex3f(x1, y2, z1);
         glEnd();
     }
-}
-
-void rotateBy(float axis[3], float phi) {
-    GLfloat m[4][4];
-    float q[4] = {0};
-    axis_to_quat(axis, RAD(phi), q);
-    build_rotmatrix(m, q);
-    glMultMatrixf(&m[0][0]);
-}
-
-float getAngle(float v1[3], float v2[3]) {
-    float len1 = sqrt(v1[0]*v1[0] + v1[1]*v1[1] + v1[2]*v1[2]);
-    float len2 = sqrt(v1[0]*v1[0] + v1[1]*v1[1] + v1[2]*v1[2]);
-    float dotprd = (v1[0]*v2[0])+(v1[1]*v2[1])+(v1[2]*v2[2]);
-    return acos(dotprd/(len1*len2));
 }
 
 void drawSkeleton() {
@@ -422,112 +577,6 @@ void drawSkeleton() {
 
 
 /*
- * Matrixes and quarterions
- */
-
-void recalcModelView() {
-  GLfloat m[4][4];
-
-  glPopMatrix();
-  glPushMatrix();
-  build_rotmatrix(m, curquat);
-  glMultMatrixf(&m[0][0]);
-  if (scalefactor == 1.0) {
-    glDisable(GL_NORMALIZE);
-  } else {
-    glEnable(GL_NORMALIZE);
-  }
-  glScalef(scalefactor, scalefactor, scalefactor);
-}
-
-void resetModelView() {
-  GLfloat m[4][4];
-  glPopMatrix();
-  glPushMatrix();
-  build_rotmatrix(m, empty);
-  glMultMatrixf(&m[0][0]);
-  if (scalefactor == 1.0) {
-    glDisable(GL_NORMALIZE);
-  } else {
-    glEnable(GL_NORMALIZE);
-  }
-  glScalef(scalefactor, scalefactor, scalefactor);
-}
-
-void multiply(float m[4][4], float c[3], float r[3]) {
-    float c2[4] = {c[0], c[1], c[2], 1};
-    float r2[4] = {0};
-    
-    int x, y;
-    for (x=0; x<4; x++) {
-        for (y=0; y<4; y++) {
-            r2[y] += m[y][x]*c2[x];
-        }        
-    }
-    
-    for (y=0; y<3; y++) {
-        r[y] = r2[y] / r2[3];
-    }
-}
-
-float *getMaterial(int i) {
-    switch(i) {
-        case 0:
-            return mat_red;
-        case 1:
-            return mat_green;
-        case 2:
-            return mat_blue;
-        default:
-            return mat_gray;
-    }
-}
-
-void drawRotationAxis() {
-    float colors[3][3] = {{0.5, 0.3, 0.3},
-                          {0.3, 0.5, 0.3},
-                          {0.3, 0.3, 0.5}
-                         };
-    const int n = 3;
-    int i;
-    int radius = 10;
-    for (i = 0; i < n; i++) {
-        if (materialsMode) {
-            glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, getMaterial(i));
-        }
-        glColor3f(colors[i][0], colors[i][1], colors[i][2]);
-        glBegin(GL_LINE_LOOP);
-            glVertex3f(0, 0, 0);
-            glVertex3f(axis[i][0] * radius, axis[i][1] * radius, axis[i][2] * radius);
-        glEnd();
-    }
-}
-
-void rotate(int by, float axis[3][3], int phi) {
-    GLfloat m[4][4];
-    float q[4] = {0};
-    int i;
-    for (i=0; i<4; i++) {
-        q[i] = 0;
-    }
-    axis_to_quat(axis[by],RAD(phi), q);
-    build_rotmatrix(m, q);
-    
-    for (i=0; i<3; i++) {
-        if (i != by) {
-            multiply(m, axis[i], axis[i]);
-        }
-    }
-    
-    for (i=0; i<NV; i++) {
-        multiply(m, vertexes[i], vertexes[i]);
-    }
-    for (i=0; i<4; i++) {
-        multiply(m, originalVertex[i], originalVertex[i]);
-    }
-}
-
-/*
  * Lighting
  */
 
@@ -558,55 +607,6 @@ void initLight() {
     glEnable(GL_DEPTH_TEST);
 }
 
-/*
- * Game
- */
-
-void initGame() {
-    int i, j;
-    float x = 0;
-    float y = 0;
-    float z = 0;
-    for (i=0; i<4; i++) {
-        for (j=0; j<3; j++) {
-            exludedVertex[i][j] = vertexes[faces[exluded][i]][j];
-        }
-        x += exludedVertex[i][0];
-        y += exludedVertex[i][1];
-        z += exludedVertex[i][2];
-    }
-    x /= 3;
-    y /= 3;
-    z /= 3;
-    for (i=0; i<4; i++) {
-        exludedVertex[i][0] += x / 6;
-        exludedVertex[i][1] += y / 6;
-        exludedVertex[i][2] += z / 6;
-        for (j=0; j < 3; j++) {
-            originalVertex[i][j] = exludedVertex[i][j];
-        }
-    }
-    
-    printf("Randomized\n");
-    for (i=0; i<2; i++) {
-        j = rand() % 3;
-        rotate(j, axis, angles[j]);
-        printf("\tAxis %d by %d degrees\n", j, angles[j]);
-    }
-}
-
-void finishGame() {
-    game = FALSE;
-}
-
-
-/*
- ###################################################################################################
- * #################################################################################################
- * #################### OLD STUFF ############################
- * ############################################################
- * ############################################################
-*/
 
 Scene::Scene() {
 }
@@ -663,6 +663,7 @@ void Scene::init() {
     Objects3D::importFromObj("Data/", "untitled.obj", models, materials);
 }
 
+
 /*
  * Drawing
  */
@@ -675,8 +676,8 @@ void Scene::draw() {
         drawRotationAxis();
     }
     
-    if (modelsMode) {
-        glScalef(6, 6, 6);
+    if (modelsMode) {        
+        glScalef(6, 6, 6);        
         for (unsigned i=0; i < models.size(); i++) {
             models[i]->render();
         }
@@ -695,6 +696,7 @@ void Scene::draw() {
       
     glutSwapBuffers();
 }
+
 
 /*
  * Events

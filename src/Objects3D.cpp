@@ -51,7 +51,7 @@ void Object3D::render() {
     if (material) {
         material->apply();
     }
-    
+    glEnable(GL_NORMALIZE);
     glBegin(GL_TRIANGLES);
     int vertexKey, normalsKey;
     for (int faceKey = 0; faceKey < nf; faceKey++) {
@@ -65,6 +65,7 @@ void Object3D::render() {
         }
     }
     glEnd();
+    glDisable(GL_NORMALIZE);
 }
 
 Object3D::~Object3D() {
